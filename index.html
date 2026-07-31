@@ -122,7 +122,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
   <section id="tab-melden">
     <h2>Ergebnis melden</h2>
     <div class="card">
-      <div class="note">Trage hier die Partie ein. Link zur chess.com oder lichess.org Partie angeben.</div>
+      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig.</div>
       <label>Runde</label><select id="f-round"></select>
       <label>Begegnung</label><select id="f-match"></select>
       <label>Brett</label><select id="f-board"></select>
@@ -220,7 +220,7 @@ function fmt(p){
   if(p-i >= 0.5) return (i===0?'':i)+'½';
   return String(i);
 }
-function pts(res){ return res==='1'?[1,0] : res==='='?[0.5,0.5] : res==='0'?[0,1] : null; }
+function pts(res){ return res==='1'?[1,0] : res==='='?[0.5,0.5] : res==='0'?[0,1] : res==='dnf'?[1,0] : null; }
 function validUrl(u){
   try{
     const x=new URL(u);
@@ -302,13 +302,18 @@ function boardHtml(r, mi, m, b){
       <span class="nm">${T[teamId].flag} ${esc(playerName(teamId, board))}</span>
       <span class="pt">${val}</span>
     </div>`;
-  let body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
+  let body = '';
+  if(g && g.res==='dnf'){
+    body = `<div class="row"><span class="nm">🚫 Gegner nicht erschienen</span><span class="pt">-</span></div>`;
+  }else{
+    body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
+  }
   let sub = '';
   let edit = '';
   if(g){
     sub = `<div class="sub">
       <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
-      ${g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : ''}
+      ${g.res==='dnf' ? '🚫 DNF' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : '')}
       ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
     </div>`;
     const sel = v => g.res===v ? ' selected':'';
@@ -381,7 +386,8 @@ function fillRes(){
     `<option value="">– bitte wählen –</option>
      <option value="1">Sieg ${esc(T[m[0]].name)}</option>
      <option value="=">Remis</option>
-     <option value="0">Sieg ${esc(T[m[1]].name)}</option>`;
+     <option value="0">Sieg ${esc(T[m[1]].name)}</option>
+     <option value="dnf">🚫 Gegner nicht erschienen</option>`;
 }
 function submitResult(){
   const box = document.getElementById('f-msg');
@@ -393,11 +399,14 @@ function submitResult(){
   const err = t => box.innerHTML = `<div class="msg err">${t}</div>`;
 
   if(!res) return err('Bitte ein Ergebnis auswählen.');
-  if(!url) return err('Bitte einen chess.com Link angeben.');
-  if(!validUrl(url)) return err('Ungültiger Link — muss chess.com/game/live/ oder chess.com/game/daily/ sein.');
+  if(res !== 'dnf' && !url) return err('Bitte einen chess.com Link angeben.');
+  if(res !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — muss chess.com/game/live/ oder chess.com/game/daily/ sein.');
 
   const k = gkey(rn,mi,b);
-  S.games[k] = {res, url};
+  const existing = S.games[k];
+  if(existing && confirm('Ergebnis überschreiben? '+JSON.stringify(existing))===false) return;
+
+  S.games[k] = {res, url: res==='dnf'?'':url};
   save(); renderAll();
   box.innerHTML = `<div class="msg good">Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
   document.getElementById('f-url').value = '';
