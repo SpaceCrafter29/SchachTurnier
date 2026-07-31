@@ -131,6 +131,15 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
       <div id="f-msg"></div>
     </div>
+    <h2>Datensicherung</h2>
+    <div class="card note">
+      Sichere regelmäßig deine Daten, falls Firebase-Sync-Probleme auftreten.
+      <div class="btnrow">
+        <button class="btn sec sm" id="exp">📥 Exportieren (JSON)</button>
+        <button class="btn sec sm" id="imp">📤 Importieren (JSON)</button>
+        <input type="file" id="impfile" accept="application/json" style="display:none">
+      </div>
+    </div>
   </section>
 </main>
 
@@ -435,7 +444,7 @@ document.addEventListener('click', e=>{
     const k = box.dataset.k;
     const res = box.querySelector('.e-res').value;
     const url = box.querySelector('.e-url').value.trim();
-    if(!validUrl(url)){ alert('Ungültiger Link (chess.com oder lichess.org)'); return; }
+    if(!validUrl(url)){ alert('Ungültiger Link (chess.com)'); return; }
     S.games[k] = {res, url};
     save(); renderAll();
   }
@@ -448,6 +457,35 @@ document.addEventListener('click', e=>{
     }
   }
 });
+
+/* Export/Import */
+document.getElementById('exp').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'schachturnier-backup-'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById('imp').onclick = ()=>document.getElementById('impfile').click();
+document.getElementById('impfile').onchange = ev=>{
+  const f = ev.target.files[0]; if(!f) return;
+  const fr = new FileReader();
+  fr.onload = ()=>{
+    try{
+      const d = JSON.parse(fr.result);
+      if(!d || typeof d!=='object' || !d.games) throw new Error('Ungültiges Format');
+      if(!confirm(''+Object.keys(d.games).length+' Ergebnisse importieren?')) return;
+      S = d;
+      save(); renderAll();
+      alert('✅ Daten importiert!');
+    }catch(e){
+      alert('❌ Fehler: '+e.message);
+    }
+  };
+  fr.readAsText(f);
+  ev.target.value='';
+};
 
 
 /* Start */
