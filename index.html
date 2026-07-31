@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Schach-Nationenturnier</title>
+<style>
+:root{
+  --bg:#f5f5f5; --panel:#ffffff; --panel2:#efefef; --line:#d0d0d0;
+  --txt:#222; --muted:#666; --accent:#ff8c00; --ok:#28a745; --warn:#ffc107;
+  --white:#f2f3f7; --black:#0b0c10;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:#7fb2ff}
+header{background:var(--accent);padding:18px 14px;text-align:center}
+header h1{margin:0;font-size:26px;letter-spacing:.5px}
+header p{margin:4px 0 0;font-size:12px;opacity:.9}
+nav{display:flex;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+nav button{flex:1;background:none;border:0;color:var(--muted);padding:12px 4px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
+nav button.on{color:var(--txt);border-bottom-color:var(--accent)}
+main{padding:12px;max-width:900px;margin:0 auto}
+section{display:none}
+section.on{display:block}
+h2{font-size:16px;margin:18px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+h2:first-child{margin-top:4px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:420px}
+th,td{padding:7px 6px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+td.team,th.team{text-align:left;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+.rank{color:var(--muted);width:22px}
+.mp{font-weight:700}
+.match{background:var(--panel2);border:1px solid var(--line);border-radius:8px;margin:8px 0;overflow:hidden}
+.match>.head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:#232634;font-weight:600;font-size:14px}
+.match>.head .agg{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700}
+.board{padding:8px 10px;border-top:1px solid var(--line)}
+.board .bl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.row{display:flex;align-items:center;gap:8px;padding:2px 0}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .pt{width:26px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;border:1px solid #666}
+.dot.w{background:var(--white)}
+.dot.b{background:var(--black)}
+.sub{font-size:11px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pill{display:inline-block;font-size:10px;padding:1px 6px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.pill.ok{color:var(--ok);border-color:#2a5c40}
+.pill.pend{color:var(--warn);border-color:#5c4a1e}
+.open{color:var(--muted);font-style:italic;font-size:13px}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;background:#fafafa;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:9px}
+button.btn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 14px;font-weight:700;cursor:pointer}
+button.btn.sec{background:#2b2f3d;color:var(--txt)}
+button.btn.sm{padding:6px 10px;font-size:12px;border-radius:6px}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.msg{padding:9px 11px;border-radius:7px;margin:10px 0;font-size:13px}
+.msg.err{background:#ffe8e8;color:#c00}
+.msg.good{background:#e8f5e9;color:#2e7d32}
+.msg.info{background:#e3f2fd;color:#1565c0}
+.edit{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);display:grid;gap:6px;grid-template-columns:1fr;}
+.edit .g{display:flex;gap:6px;align-items:center}
+.edit .g select{flex:none;width:auto;min-width:130px}
+.edit .g input{flex:1}
+.note{font-size:12px;color:var(--muted)}
+.legend{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.rd{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 4px}
+.rd b{font-size:15px}
+.rd span{font-size:12px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
+.tierhdr{font-size:12px;color:var(--accent);font-weight:700;margin:12px 0 4px}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Spielplan</h1>
+  <p>Nationen-Mannschaftsturnier &middot; 8 Teams &middot; 3 Bretter</p>
+</header>
+
+<nav>
+  <button data-tab="tabelle" class="on">Tabelle</button>
+  <button data-tab="plan">Spielplan</button>
+  <button data-tab="melden">Ergebnis melden</button>
+</nav>
+
+<main>
+  <section id="tab-tabelle" class="on">
+    <h2>Mannschaftstabelle</h2>
+    <div class="card">
+      <div class="scroll"><table id="standings"></table></div>
+      <div class="legend">
+        <span>MP = Mannschaftspunkte (Sieg 2 / Remis 1)</span>
+        <span>BP = Brettpunkte</span>
+        <span>Sp = beendete Begegnungen</span>
+      </div>
+    </div>
+    <h2>Einzelwertung</h2>
+    <div class="card" id="individual"></div>
+  </section>
+
+  <section id="tab-plan">
+    <div class="card note">
+      Gespielt wird mit 3 Brettern. Das <b>erstgenannte Team</b> hat auf <b>Brett&nbsp;1 und&nbsp;3 Schwarz</b> und auf <b>Brett&nbsp;2 Weiß</b>.
+      <div class="legend" style="margin-top:8px">
+        <span><span class="dot w" style="display:inline-block;vertical-align:-1px"></span> Weiß</span>
+        <span><span class="dot b" style="display:inline-block;vertical-align:-1px"></span> Schwarz</span>
+        <span class="pill ok">bestätigt</span>
+        <span class="pill pend">gemeldet</span>
+      </div>
+    </div>
+    <div id="schedule"></div>
+    <div class="card note">
+      Mögliche Tiebreaks: 30.08.–31.08. (unwahrscheinlich, dass es passiert) &middot; <b>Finale: 01.09.</b>
+    </div>
+  </section>
+
+  <section id="tab-melden">
+    <h2>Ergebnis melden</h2>
+    <div class="card">
+      <div class="note">Trage hier die Partie ein. Link zur chess.com oder lichess.org Partie angeben.</div>
+      <label>Runde</label><select id="f-round"></select>
+      <label>Begegnung</label><select id="f-match"></select>
+      <label>Brett</label><select id="f-board"></select>
+      <label>Ergebnis</label><select id="f-res"></select>
+      <label>Link zur Partie</label><input id="f-url" placeholder="https://www.chess.com/game/live/...">
+      <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
+      <div id="f-msg"></div>
+    </div>
+  </section>
+</main>
+
+<footer>Ergebnisse werden live über Firebase synchronisiert.</footer>
+
+<script type="module">
+"use strict";
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  projectId: "strategic-bus-gtgzl",
+  appId: "1:223160037293:web:05722321bf1f676a477b24",
+  apiKey: "AIzaSyAnnacfE_oBHBFAVytJfB2jjYyg883PpZ0",
+  authDomain: "strategic-bus-gtgzl.firebaseapp.com",
+  storageBucket: "strategic-bus-gtgzl.firebasestorage.app",
+  messagingSenderId: "223160037293"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+
+/* ---------- Stammdaten ---------- */
+const TEAMS = [
+  {id:'nor', name:'Norwegen',        flag:'🇳🇴'},
+  {id:'prk', name:'Nordkorea',       flag:'🇰🇵'},
+  {id:'vat', name:'Vatikan',         flag:'🇻🇦'},
+  {id:'uzb', name:'Uzbekistan',      flag:'🇺🇿'},
+  {id:'ant', name:'Antigua',         flag:'🇦🇬'},
+  {id:'chn', name:'China',           flag:'🇨🇳'},
+  {id:'bar', name:'Barbuda',         flag:'🏝️'},
+  {id:'gat', name:'Gatzendimension', flag:'🌀'}
+];
+const T = Object.fromEntries(TEAMS.map(t=>[t.id,t]));
+const TIER = {1:'sehr gut', 2:'gut', 3:'schlecht'};
+
+/* Spielplan laut Tabelle – erstgenanntes Team = "Heim" */
+const ROUNDS = [
+  {nr:1, date:'28.07.–30.07.', ms:[['nor','uzb'],['vat','bar'],['prk','chn'],['gat','ant']]},
+  {nr:2, date:'02.08.–04.08.', ms:[['uzb','ant'],['chn','gat'],['bar','prk'],['nor','vat']]},
+  {nr:3, date:'07.08.–09.08.', ms:[['vat','uzb'],['prk','nor'],['gat','bar'],['ant','chn']]},
+  {nr:4, date:'12.08.–14.08.', ms:[['uzb','chn'],['bar','ant'],['nor','gat'],['vat','prk']]},
+  {nr:5, date:'17.08.–19.08.', ms:[['prk','uzb'],['gat','vat'],['ant','nor'],['chn','bar']]},
+  {nr:6, date:'22.08.–24.08.', ms:[['vat','ant'],['nor','chn'],['uzb','bar'],['prk','gat']]},
+  {nr:7, date:'27.08.–29.08.', ms:[['gat','uzb'],['ant','prk'],['chn','vat'],['bar','nor']]}
+];
+
+const KEY = 'schachturnier_v1';
+
+/* ---------- State ---------- */
+let S = blank();
+
+function blank(){
+  const players = {};
+  TEAMS.forEach(t=>players[t.id]=['','','']);
+  return {players, games:{}};
+}
+
+const docRef = doc(db, "tournament", "state");
+onSnapshot(docRef, (docSnap) => {
+  if (docSnap.exists()) {
+    const d = docSnap.data();
+    const b = blank();
+    S = {players:Object.assign(b.players,d.players||{}), games:d.games||{}};
+  } else {
+    S = blank();
+  }
+  renderAll();
+});
+
+function save(){ setDoc(docRef, S); }
+
+/* ---------- Helfer ---------- */
+const gkey = (r,m,b)=>'R'+r+'M'+m+'B'+b;
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Heim (erstgenannt): Brett 1+3 Schwarz, Brett 2 Weiß */
+const homeIsWhite = b => b===2;
+
+function playerName(teamId, board){
+  const n = (S.players[teamId]||[])[board-1];
+  return n && n.trim() ? n.trim() : T[teamId].name+' – '+TIER[board];
+}
+function fmt(p){
+  const i = Math.floor(p);
+  if(p-i >= 0.5) return (i===0?'':i)+'½';
+  return String(i);
+}
+function pts(res){ return res==='1'?[1,0] : res==='='?[0.5,0.5] : res==='0'?[0,1] : null; }
+function validUrl(u){
+  try{
+    const x=new URL(u);
+    const isChesscom = x.hostname.includes('chess.com');
+    const hasGamePath = /\/(live|daily)\/game\/[0-9]+/.test(x.pathname) || /\/game\/(live|daily)\/[0-9]+/.test(x.pathname);
+    return isChesscom && hasGamePath && /^https?:$/.test(x.protocol);
+  }
+  catch(e){ return false; }
+}
+
+/* ---------- Tabelle ---------- */
+function computeStandings(){
+  const st = {};
+  TEAMS.forEach(t=>st[t.id]={id:t.id, sp:0, w:0, d:0, l:0, mp:0, bp:0});
+  ROUNDS.forEach(r=>r.ms.forEach((m,mi)=>{
+    const [h,a] = m;
+    let hb=0, ab=0, done=0;
+    for(let b=1;b<=3;b++){
+      const g = S.games[gkey(r.nr,mi,b)];
+      const p = g && pts(g.res);
+      if(p){ hb+=p[0]; ab+=p[1]; done++; }
+    }
+    st[h].bp+=hb; st[a].bp+=ab;
+    if(done===3){
+      st[h].sp++; st[a].sp++;
+      if(hb>ab){ st[h].w++; st[a].l++; st[h].mp+=2; }
+      else if(hb<ab){ st[a].w++; st[h].l++; st[a].mp+=2; }
+      else { st[h].d++; st[a].d++; st[h].mp++; st[a].mp++; }
+    }
+  }));
+  return Object.values(st).sort((x,y)=> y.mp-x.mp || y.bp-x.bp || T[x.id].name.localeCompare(T[y.id].name));
+}
+
+function renderStandings(){
+  const rows = computeStandings().map((s,i)=>`
+    <tr>
+      <td class="rank">${i+1}</td>
+      <td class="team">${T[s.id].flag} ${esc(T[s.id].name)}</td>
+      <td>${s.sp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
+      <td class="mp">${s.mp}</td><td>${fmt(s.bp)}</td>
+    </tr>`).join('');
+  document.getElementById('standings').innerHTML =
+    `<thead><tr><th></th><th class="team">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>MP</th><th>BP</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderIndividual(){
+  const acc = {};
+  TEAMS.forEach(t=>{ acc[t.id]={1:{p:0,g:0},2:{p:0,g:0},3:{p:0,g:0}}; });
+  ROUNDS.forEach(r=>r.ms.forEach((m,mi)=>{
+    for(let b=1;b<=3;b++){
+      const g = S.games[gkey(r.nr,mi,b)]; const p = g && pts(g.res);
+      if(!p) continue;
+      acc[m[0]][b].p+=p[0]; acc[m[0]][b].g++;
+      acc[m[1]][b].p+=p[1]; acc[m[1]][b].g++;
+    }
+  }));
+  let html='';
+  for(let b=1;b<=3;b++){
+    const list = TEAMS.map(t=>({t, ...acc[t.id][b]})).sort((x,y)=> y.p-x.p || y.g-x.g);
+    html += `<div class="tierhdr">Brett ${b} · ${TIER[b]}</div><div class="scroll"><table>
+      <thead><tr><th></th><th class="team">Spieler</th><th>Team</th><th>Partien</th><th>Punkte</th></tr></thead><tbody>` +
+      list.map((e,i)=>`<tr><td class="rank">${i+1}</td><td class="team">${esc(playerName(e.t.id,b))}</td>
+        <td>${e.t.flag}</td><td>${e.g}</td><td class="mp">${fmt(e.p)}</td></tr>`).join('') +
+      `</tbody></table></div>`;
+  }
+  document.getElementById('individual').innerHTML = html;
+}
+
+/* ---------- Spielplan ---------- */
+function boardHtml(r, mi, m, b){
+  const [h,a] = m;
+  const k = gkey(r.nr, mi, b);
+  const g = S.games[k];
+  const p = g && pts(g.res);
+  const hw = homeIsWhite(b);
+  const line = (teamId, board, isHome, val) => `
+    <div class="row">
+      <span class="dot ${ (isHome? hw : !hw) ? 'w':'b'}"></span>
+      <span class="nm">${T[teamId].flag} ${esc(playerName(teamId, board))}</span>
+      <span class="pt">${val}</span>
+    </div>`;
+  let body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
+  let sub = '';
+  let edit = '';
+  if(g){
+    sub = `<div class="sub">
+      <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
+      ${g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : ''}
+      ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
+    </div>`;
+    const sel = v => g.res===v ? ' selected':'';
+    edit = `<div class="edit" data-k="${k}">
+      <div class="g">
+        <select class="e-res"><option value="1"${sel('1')}>Sieg ${esc(T[h].name)}</option><option value="="${sel('=')}>Remis</option><option value="0"${sel('0')}>Sieg ${esc(T[a].name)}</option></select>
+        <input class="e-url" placeholder="Link..." value="${esc(g.url||'')}">
+      </div>
+      <div class="g">
+        <button class="btn sm e-save">✓ Speichern</button>
+        <button class="btn sec sm e-del">✕ Löschen</button>
+      </div>
+    </div>`;
+  }else{
+    sub = `<div class="sub open">noch kein Ergebnis</div>`;
+  }
+  return `<div class="board"><div class="bl">Brett ${b} · ${TIER[b]}</div>${body}${sub}${edit}</div>`;
+}
+
+function renderSchedule(){
+  let html = '';
+  ROUNDS.forEach(r=>{
+    html += `<div class="rd"><b>${r.nr}. Runde</b><span>${r.date}</span></div>`;
+    r.ms.forEach((m,mi)=>{
+      const [h,a] = m;
+      let hb=0, ab=0, any=false;
+      for(let b=1;b<=3;b++){
+        const p = S.games[gkey(r.nr,mi,b)] && pts(S.games[gkey(r.nr,mi,b)].res);
+        if(p){ hb+=p[0]; ab+=p[1]; any=true; }
+      }
+      html += `<div class="match">
+        <div class="head">
+          <span>${T[h].flag} ${esc(T[h].name)} <span style="color:var(--muted)">vs</span> ${esc(T[a].name)} ${T[a].flag}</span>
+          <span class="agg">${any? fmt(hb)+' : '+fmt(ab) : '– : –'}</span>
+        </div>
+        ${[1,2,3].map(b=>boardHtml(r,mi,m,b)).join('')}
+      </div>`;
+    });
+  });
+  document.getElementById('schedule').innerHTML = html;
+}
+
+/* ---------- Meldeformular ---------- */
+function fillRounds(){
+  document.getElementById('f-round').innerHTML =
+    ROUNDS.map(r=>`<option value="${r.nr}">${r.nr}. Runde (${r.date})</option>`).join('');
+}
+function fillMatches(){
+  const rn = +document.getElementById('f-round').value;
+  const r = ROUNDS.find(x=>x.nr===rn);
+  document.getElementById('f-match').innerHTML =
+    r.ms.map((m,i)=>`<option value="${i}">${T[m[0]].name} vs ${T[m[1]].name}</option>`).join('');
+  fillBoards();
+}
+function fillBoards(){
+  const rn = +document.getElementById('f-round').value;
+  const mi = +document.getElementById('f-match').value;
+  const m = ROUNDS.find(x=>x.nr===rn).ms[mi];
+  document.getElementById('f-board').innerHTML = [1,2,3].map(b=>{
+    const hw = homeIsWhite(b);
+    return `<option value="${b}">Brett ${b} · ${TIER[b]} — ${T[m[0]].name} ${hw?'(weiß)':'(schwarz)'} vs ${T[m[1]].name} ${hw?'(schwarz)':'(weiß)'}</option>`;
+  }).join('');
+  fillRes();
+}
+function fillRes(){
+  const rn = +document.getElementById('f-round').value;
+  const mi = +document.getElementById('f-match').value;
+  const m = ROUNDS.find(x=>x.nr===rn).ms[mi];
+  document.getElementById('f-res').innerHTML =
+    `<option value="">– bitte wählen –</option>
+     <option value="1">Sieg ${esc(T[m[0]].name)}</option>
+     <option value="=">Remis</option>
+     <option value="0">Sieg ${esc(T[m[1]].name)}</option>`;
+}
+function submitResult(){
+  const box = document.getElementById('f-msg');
+  const rn = +document.getElementById('f-round').value;
+  const mi = +document.getElementById('f-match').value;
+  const b  = +document.getElementById('f-board').value;
+  const res = document.getElementById('f-res').value;
+  const url = document.getElementById('f-url').value.trim();
+  const err = t => box.innerHTML = `<div class="msg err">${t}</div>`;
+
+  if(!res) return err('Bitte ein Ergebnis auswählen.');
+  if(!url) return err('Bitte einen chess.com Link angeben.');
+  if(!validUrl(url)) return err('Ungültiger Link — muss chess.com/game/live/ oder chess.com/game/daily/ sein.');
+
+  const k = gkey(rn,mi,b);
+  S.games[k] = {res, url};
+  save(); renderAll();
+  box.innerHTML = `<div class="msg good">Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
+  document.getElementById('f-url').value = '';
+  document.getElementById('f-res').value = '';
+}
+
+
+/* ---------- Render / Events ---------- */
+function renderAll(){ renderStandings(); renderIndividual(); renderSchedule(); }
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
+  document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on', s.id==='tab-'+b.dataset.tab));
+  window.scrollTo(0,0);
+});
+
+document.getElementById('f-round').onchange = fillMatches;
+document.getElementById('f-match').onchange = fillBoards;
+document.getElementById('f-board').onchange = fillRes;
+document.getElementById('f-send').onclick = submitResult;
+
+/* Edit existing results */
+document.addEventListener('click', e=>{
+  if(e.target.classList.contains('e-save')){
+    const box = e.target.closest('.edit');
+    const k = box.dataset.k;
+    const res = box.querySelector('.e-res').value;
+    const url = box.querySelector('.e-url').value.trim();
+    if(!validUrl(url)){ alert('Ungültiger Link (chess.com oder lichess.org)'); return; }
+    S.games[k] = {res, url};
+    save(); renderAll();
+  }
+  if(e.target.classList.contains('e-del')){
+    const box = e.target.closest('.edit');
+    const k = box.dataset.k;
+    if(confirm('Ergebnis wirklich löschen?')){
+      delete S.games[k];
+      save(); renderAll();
+    }
+  }
+});
+
+
+/* Start */
+fillRounds(); fillMatches(); renderAll();
+</script>
+</body>
+</html>
