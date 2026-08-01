@@ -194,7 +194,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 "use strict";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFirestore, doc, setDoc, updateDoc, deleteField, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   projectId: "strategic-bus-gtgzl",
@@ -274,7 +274,7 @@ onSnapshot(docRef, (docSnap) => {
   renderAll();
   
   if (hasLocalData) {
-    save();
+    setDoc(docRef, S, {merge:true}).catch(error => console.error("Firebase Migration Error:", error));
   }
 }, (error) => {
   console.error("Firebase Snapshot Error:", error);
@@ -284,12 +284,23 @@ onSnapshot(docRef, (docSnap) => {
   document.body.prepend(errBox);
 });
 
-function save(){ 
-  setDoc(docRef, S).catch(error => {
-    console.error("Firebase Save Error:", error);
-    const box = document.getElementById('f-msg');
-    if (box) box.innerHTML = `<div class="msg err">⚠️ Firebase Speicherfehler: ${error.message}</div>`;
-  });
+function updateGameInFirebase(k, data) {
+  if (data === null) {
+    updateDoc(docRef, { [`games.${k}`]: deleteField() }).catch(error => {
+      console.error("Firebase Delete Error:", error);
+      alert("Fehler beim Löschen: " + error.message);
+    });
+  } else {
+    updateDoc(docRef, { [`games.${k}`]: data }).catch(error => {
+      // Wenn das Dokument noch gar nicht existiert, setDoc als fallback
+      if (error.code === 'not-found') {
+        setDoc(docRef, { games: { [k]: data } }, { merge: true });
+      } else {
+        console.error("Firebase Update Error:", error);
+        alert("Fehler beim Speichern: " + error.message);
+      }
+    });
+  }
 }
 
 /* ---------- Helfer ---------- */
@@ -524,7 +535,8 @@ async function submitResult(){
   }
 
   S.games[k] = {res, url: res==='dnf'?'':url};
-  save(); renderAll();
+  updateGameInFirebase(k, S.games[k]);
+  renderAll();
   box.innerHTML = `<div class="msg good">✅ Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
   document.getElementById('f-url').value = '';
   document.getElementById('f-res').value = '';
@@ -562,14 +574,16 @@ document.addEventListener('click', async e=>{
       if(!check.ok){ alert('❌ '+check.msg); return; }
     }
     S.games[k] = {res, url: res==='dnf'?'':url};
-    save(); renderAll();
+    updateGameInFirebase(k, S.games[k]);
+    renderAll();
   }
   if(e.target.classList.contains('e-del')){
     const box = e.target.closest('.edit');
     const k = box.dataset.k;
     if(confirm('Ergebnis wirklich löschen?')){
       delete S.games[k];
-      save(); renderAll();
+      updateGameInFirebase(k, null);
+      renderAll();
     }
   }
 });
