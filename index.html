@@ -85,7 +85,8 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 <nav>
   <button data-tab="tabelle" class="on">Tabelle</button>
   <button data-tab="plan">Spielplan</button>
-  <button data-tab="melden">Ergebnis melden</button>
+  <button data-tab="melden">Melden</button>
+  <button data-tab="regeln">Regeln</button>
 </nav>
 
 <main>
@@ -122,7 +123,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
   <section id="tab-melden">
     <h2>Ergebnis melden</h2>
     <div class="card">
-      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig.</div>
+      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com geprüft.</div>
       <label>Runde</label><select id="f-round"></select>
       <label>Begegnung</label><select id="f-match"></select>
       <label>Brett</label><select id="f-board"></select>
@@ -130,6 +131,59 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       <label>Link zur Partie</label><input id="f-url" placeholder="https://www.chess.com/game/live/...">
       <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
       <div id="f-msg"></div>
+    </div>
+  </section>
+
+  <section id="tab-regeln">
+    <h2>Turnierregeln</h2>
+
+    <div class="card">
+      <div class="tierhdr">1. Mannschaftskämpfe</div>
+      <div class="note" style="font-size:14px;line-height:1.6">
+        Die <b>Bretter 1 spielen gegeneinander</b>, Bretter 2 spielen gegeneinander, Bretter 3 spielen gegeneinander.
+        <br><br>
+        Pro Brett können <b>Brettpunkte</b> errungen werden:
+        <ul style="margin:4px 0 8px 20px">
+          <li>Sieg = <b>1 Brettpunkt</b></li>
+          <li>Remis = <b>0,5 Brettpunkte</b></li>
+          <li>Niederlage = <b>0 Brettpunkte</b></li>
+        </ul>
+        Eine Mannschaft gewinnt <b>2 Mannschaftspunkte</b>, wenn sie nach Abschluss aller Spiele eines Matches <b>mehr Brettpunkte</b> als die Gegner hat.
+        <br>Bei gleicher Anzahl an Brettpunkten geht <b>1 Mannschaftspunkt an beide Nationen</b>.
+        <br><br>
+        <b>Mannschaftspunkte</b> sind die Hauptpunktzahl. Tiebreaks:
+        <ol style="margin:4px 0 0 20px">
+          <li>Brettpunkte</li>
+          <li>Gegnerpunktzahl</li>
+          <li>Ratingtiebreak</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tierhdr">2. Ablauf</div>
+      <div class="note" style="font-size:14px;line-height:1.6">
+        Die Nationen spielen <b>Round-Robin</b> — jeder gegen jeden.
+        <br><br>
+        Alle <b>Bretter eines Matches spielen gleichzeitig</b>. Es spielen immer 2 Nationen gegeneinander.
+        <br><br>
+        Die <b>Top 2 nach Round-Robin</b> qualifizieren sich für das Finale.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tierhdr">3. Finale</div>
+      <div class="note" style="font-size:14px;line-height:1.6">
+        Im Finale gibt es <b>2 Matches</b>, sodass jeder einmal Weiß und einmal Schwarz hat.
+        <br><br>
+        Steht es danach <b>2:2 in Mannschaftspunkten</b>, wird ein <b>Armageddon zwischen Brett 1</b> ausgetragen.
+        <br><br>
+        Der Sieger des Finals ist der <b>🏆 Sieger der Chess Olympics!</b>
+      </div>
+    </div>
+
+    <div class="card note" style="text-align:center;font-size:13px">
+      Noch Fragen? Stellt sie gerne :)
     </div>
   </section>
 </main>
@@ -255,13 +309,32 @@ function fmt(p){
   return String(i);
 }
 function pts(res){ return res==='1'?[1,0] : res==='='?[0.5,0.5] : res==='0'?[0,1] : res==='dnf'?[1,0] : null; }
-function validUrl(u){
+function extractGameId(u){
   try{
     const x=new URL(u);
-    const hasGame = /\/(live|daily)\/game\/[0-9]+/.test(x.pathname) || /\/game\/(live|daily)\/[0-9]+/.test(x.pathname);
-    return x.hostname.includes('chess.com') && hasGame && /^https?:$/.test(x.protocol);
+    if(!x.hostname.includes('chess.com')) return null;
+    const m = x.pathname.match(/(?:live|daily)\/game\/(\d+)|game\/(?:live|daily)\/(\d+)/);
+    return m ? (m[1]||m[2]) : null;
+  }catch(e){ return null; }
+}
+function validUrl(u){
+  return extractGameId(u) !== null;
+}
+async function verifyChessGame(u){
+  const id = extractGameId(u);
+  if(!id) return {ok:false, msg:'Ungültiges URL-Format'};
+  try{
+    const proxy = 'https://corsproxy.io/?';
+    const target = encodeURIComponent(`https://www.chess.com/callback/live/game/${id}`);
+    const r = await fetch(proxy+target, {cache:'no-store'});
+    if(r.ok){
+      const data = await r.json();
+      if(data && (data.game || data.players)) return {ok:true, data};
+    }
+    return {ok:false, msg:'Partie mit dieser ID existiert nicht auf chess.com'};
+  }catch(e){
+    return {ok:true, msg:'Format OK (API-Prüfung nicht möglich)'};
   }
-  catch(e){ return false; }
 }
 
 /* ---------- Tabelle ---------- */
@@ -422,14 +495,16 @@ function fillRes(){
      <option value="0">Sieg ${esc(T[m[1]].name)}</option>
      <option value="dnf">🚫 Gegner nicht erschienen</option>`;
 }
-function submitResult(){
+async function submitResult(){
   const box = document.getElementById('f-msg');
+  const btn = document.getElementById('f-send');
   const rn = +document.getElementById('f-round').value;
   const mi = +document.getElementById('f-match').value;
   const b  = +document.getElementById('f-board').value;
   const res = document.getElementById('f-res').value;
   const url = document.getElementById('f-url').value.trim();
   const err = t => box.innerHTML = `<div class="msg err">${t}</div>`;
+  const info = t => box.innerHTML = `<div class="msg info">${t}</div>`;
 
   if(!res) return err('Bitte ein Ergebnis auswählen.');
   if(res !== 'dnf' && !url) return err('Bitte einen chess.com Link angeben.');
@@ -438,6 +513,15 @@ function submitResult(){
   const k = gkey(rn,mi,b);
   const existing = S.games[k];
   if(existing && !confirm('Ergebnis existiert bereits. Überschreiben?')) return;
+
+  if(res !== 'dnf'){
+    btn.disabled = true;
+    info('⏳ Prüfe chess.com Partie...');
+    const check = await verifyChessGame(url);
+    btn.disabled = false;
+    if(!check.ok){ return err('❌ '+check.msg); }
+    if(check.msg) info('⚠️ '+check.msg);
+  }
 
   S.games[k] = {res, url: res==='dnf'?'':url};
   save(); renderAll();
@@ -462,13 +546,21 @@ document.getElementById('f-board').onchange = fillRes;
 document.getElementById('f-send').onclick = submitResult;
 
 /* Edit existing results */
-document.addEventListener('click', e=>{
+document.addEventListener('click', async e=>{
   if(e.target.classList.contains('e-save')){
     const box = e.target.closest('.edit');
     const k = box.dataset.k;
     const res = box.querySelector('.e-res').value;
     const url = box.querySelector('.e-url').value.trim();
-    if(res !== 'dnf' && !validUrl(url)){ alert('Ungültiger chess.com Link'); return; }
+    if(res !== 'dnf'){
+      if(!validUrl(url)){ alert('Ungültiger chess.com Link'); return; }
+      e.target.disabled = true;
+      e.target.textContent = '⏳ Prüfe...';
+      const check = await verifyChessGame(url);
+      e.target.disabled = false;
+      e.target.textContent = '✓ Speichern';
+      if(!check.ok){ alert('❌ '+check.msg); return; }
+    }
     S.games[k] = {res, url: res==='dnf'?'':url};
     save(); renderAll();
   }
