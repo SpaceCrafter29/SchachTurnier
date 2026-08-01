@@ -12,7 +12,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-a{color:#7fb2ff}
+a{color:var(--accent);font-weight:600}
 header{background:var(--accent);padding:18px 14px;text-align:center}
 header h1{margin:0;font-size:26px;letter-spacing:.5px}
 header p{margin:4px 0 0;font-size:12px;opacity:.9}
@@ -34,8 +34,8 @@ tbody tr:last-child td{border-bottom:0}
 .rank{color:var(--muted);width:22px}
 .mp{font-weight:700}
 .match{background:var(--panel2);border:1px solid var(--line);border-radius:8px;margin:8px 0;overflow:hidden}
-.match>.head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:#232634;font-weight:600;font-size:14px}
-.match>.head .agg{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700}
+.match>.head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:#e0e0e0;color:#222;font-weight:600;font-size:14px}
+.match>.head .agg{color:#555;font-variant-numeric:tabular-nums;font-weight:700}
 .board{padding:8px 10px;border-top:1px solid var(--line)}
 .board .bl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .row{display:flex;align-items:center;gap:8px;padding:2px 0}
@@ -46,14 +46,14 @@ tbody tr:last-child td{border-bottom:0}
 .dot.b{background:var(--black)}
 .sub{font-size:11px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pill{display:inline-block;font-size:10px;padding:1px 6px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
-.pill.ok{color:var(--ok);border-color:#2a5c40}
-.pill.pend{color:var(--warn);border-color:#5c4a1e}
+.pill.ok{color:var(--ok);border-color:var(--ok);background:#e8f5e9}
+.pill.pend{color:#b26a00;border-color:#b26a00;background:#fff4e5}
 .open{color:var(--muted);font-style:italic;font-size:13px}
 label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
 input,select,textarea,button{font:inherit}
 input,select,textarea{width:100%;background:#fafafa;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:9px}
 button.btn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 14px;font-weight:700;cursor:pointer}
-button.btn.sec{background:#2b2f3d;color:var(--txt)}
+button.btn.sec{background:#e0e0e0;color:#222;border:1px solid var(--line)}
 button.btn.sm{padding:6px 10px;font-size:12px;border-radius:6px}
 button.btn:disabled{opacity:.5;cursor:not-allowed}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -123,7 +123,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
   <section id="tab-melden">
     <h2>Ergebnis melden</h2>
     <div class="card">
-      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com geprüft.</div>
+      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung.</div>
       <label>Runde</label><select id="f-round"></select>
       <label>Begegnung</label><select id="f-match"></select>
       <label>Brett</label><select id="f-board"></select>
@@ -426,28 +426,16 @@ function boardHtml(r, mi, m, b){
     body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
   }
   let sub = '';
-  let edit = '';
   if(g){
     sub = `<div class="sub">
       <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
       ${g.res==='dnf' ? '🚫 DNF' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : '')}
       ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
     </div>`;
-    const sel = v => g.res===v ? ' selected':'';
-    edit = `<div class="edit" data-k="${k}">
-      <div class="g">
-        <select class="e-res"><option value="1"${sel('1')}>Sieg ${esc(T[h].name)}</option><option value="="${sel('=')}>Remis</option><option value="0"${sel('0')}>Sieg ${esc(T[a].name)}</option><option value="dnf"${sel('dnf')}>🚫 DNF</option></select>
-        <input class="e-url" placeholder="Link..." value="${esc(g.url||'')}">
-      </div>
-      <div class="g">
-        <button class="btn sm e-save">✓ Speichern</button>
-        <button class="btn sec sm e-del">✕ Löschen</button>
-      </div>
-    </div>`;
   }else{
     sub = `<div class="sub open">noch kein Ergebnis</div>`;
   }
-  return `<div class="board"><div class="bl">Brett ${b} · ${TIER[b]}</div>${body}${sub}${edit}</div>`;
+  return `<div class="board"><div class="bl">Brett ${b} · ${TIER[b]}</div>${body}${sub}</div>`;
 }
 
 function renderSchedule(){
@@ -556,38 +544,6 @@ document.getElementById('f-round').onchange = fillMatches;
 document.getElementById('f-match').onchange = fillBoards;
 document.getElementById('f-board').onchange = fillRes;
 document.getElementById('f-send').onclick = submitResult;
-
-/* Edit existing results */
-document.addEventListener('click', async e=>{
-  if(e.target.classList.contains('e-save')){
-    const box = e.target.closest('.edit');
-    const k = box.dataset.k;
-    const res = box.querySelector('.e-res').value;
-    const url = box.querySelector('.e-url').value.trim();
-    if(res !== 'dnf'){
-      if(!validUrl(url)){ alert('Ungültiger chess.com Link'); return; }
-      e.target.disabled = true;
-      e.target.textContent = '⏳ Prüfe...';
-      const check = await verifyChessGame(url);
-      e.target.disabled = false;
-      e.target.textContent = '✓ Speichern';
-      if(!check.ok){ alert('❌ '+check.msg); return; }
-    }
-    S.games[k] = {res, url: res==='dnf'?'':url};
-    updateGameInFirebase(k, S.games[k]);
-    renderAll();
-  }
-  if(e.target.classList.contains('e-del')){
-    const box = e.target.closest('.edit');
-    const k = box.dataset.k;
-    if(confirm('Ergebnis wirklich löschen?')){
-      delete S.games[k];
-      updateGameInFirebase(k, null);
-      renderAll();
-    }
-  }
-});
-
 
 /* Start */
 fillRounds(); fillMatches(); renderAll();
