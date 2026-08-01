@@ -161,7 +161,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+window.db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+const db = window.db;
 
 /* ---------- Stammdaten ---------- */
 const TEAMS = [
@@ -199,7 +200,8 @@ function blank(){
   return {players, games:{}};
 }
 
-const docRef = doc(db, "tournament", "state");
+window.docRef = doc(window.db, "tournament", "state");
+const docRef = window.docRef;
 onSnapshot(docRef, (docSnap) => {
   if (docSnap.exists()) {
     const d = docSnap.data();
