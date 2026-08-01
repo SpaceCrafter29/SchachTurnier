@@ -97,6 +97,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       <div class="legend">
         <span>MP = Mannschaftspunkte (Sieg 2 / Remis 1)</span>
         <span>BP = Brettpunkte</span>
+        <span>SB = Sonneborn-Berger (Σ eigene MP × Gegner-MP)</span>
         <span>Sp = beendete Begegnungen</span>
       </div>
     </div>
@@ -154,7 +155,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
         <b>Mannschaftspunkte</b> sind die Hauptpunktzahl. Tiebreaks:
         <ol style="margin:4px 0 0 20px">
           <li>Brettpunkte</li>
-          <li>Gegnerpunktzahl</li>
+          <li>Sonneborn-Berger (SB): Summe der eigenen Mannschaftspunkte in jedem Match, multipliziert mit der Gesamt-Mannschaftspunktzahl des jeweiligen Gegners. Belohnt Siege gegen starke Gegner mehr als Siege gegen schwache.</li>
           <li>Ratingtiebreak</li>
         </ol>
       </div>
@@ -373,7 +374,7 @@ async function verifyChessGame(u){
 /* ---------- Tabelle ---------- */
 function computeStandings(){
   const st = {};
-  TEAMS.forEach(t=>st[t.id]={id:t.id, sp:0, w:0, d:0, l:0, mp:0, bp:0});
+  TEAMS.forEach(t=>st[t.id]={id:t.id, sp:0, w:0, d:0, l:0, mp:0, bp:0, sb:0, matches:[]});
   ROUNDS.forEach(r=>r.ms.forEach((m,mi)=>{
     const [h,a] = m;
     let hb=0, ab=0, done=0;
@@ -385,12 +386,20 @@ function computeStandings(){
     st[h].bp+=hb; st[a].bp+=ab;
     if(done===3){
       st[h].sp++; st[a].sp++;
-      if(hb>ab){ st[h].w++; st[a].l++; st[h].mp+=2; }
-      else if(hb<ab){ st[a].w++; st[h].l++; st[a].mp+=2; }
-      else { st[h].d++; st[a].d++; st[h].mp++; st[a].mp++; }
+      let hmp=0, amp=0;
+      if(hb>ab){ st[h].w++; st[a].l++; hmp=2; }
+      else if(hb<ab){ st[a].w++; st[h].l++; amp=2; }
+      else { st[h].d++; st[a].d++; hmp=1; amp=1; }
+      st[h].mp+=hmp; st[a].mp+=amp;
+      st[h].matches.push({opp:a, mp:hmp});
+      st[a].matches.push({opp:h, mp:amp});
     }
   }));
-  return Object.values(st).sort((x,y)=> y.mp-x.mp || y.bp-x.bp || T[x.id].name.localeCompare(T[y.id].name));
+  /* Sonneborn-Berger: Summe (eigene MP im Match × Gesamt-MP des Gegners) */
+  TEAMS.forEach(t=>{
+    st[t.id].sb = st[t.id].matches.reduce((s,m)=> s + m.mp * st[m.opp].mp, 0);
+  });
+  return Object.values(st).sort((x,y)=> y.mp-x.mp || y.bp-x.bp || y.sb-x.sb || T[x.id].name.localeCompare(T[y.id].name));
 }
 
 function renderStandings(){
@@ -399,10 +408,10 @@ function renderStandings(){
       <td class="rank">${i+1}</td>
       <td class="team">${T[s.id].flag} ${esc(T[s.id].name)}</td>
       <td>${s.sp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
-      <td class="mp">${s.mp}</td><td>${fmt(s.bp)}</td>
+      <td class="mp">${s.mp}</td><td>${fmt(s.bp)}</td><td>${s.sb}</td>
     </tr>`).join('');
   document.getElementById('standings').innerHTML =
-    `<thead><tr><th></th><th class="team">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>MP</th><th>BP</th></tr></thead><tbody>${rows}</tbody>`;
+    `<thead><tr><th></th><th class="team">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>MP</th><th>BP</th><th>SB</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
 function renderIndividual(){
