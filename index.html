@@ -131,15 +131,6 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
       <div id="f-msg"></div>
     </div>
-    <h2>Datensicherung</h2>
-    <div class="card note">
-      Sichere regelmäßig deine Daten, falls Firebase-Sync-Probleme auftreten.
-      <div class="btnrow">
-        <button class="btn sec sm" id="exp">📥 Exportieren (JSON)</button>
-        <button class="btn sec sm" id="imp">📤 Importieren (JSON)</button>
-        <input type="file" id="impfile" accept="application/json" style="display:none">
-      </div>
-    </div>
   </section>
 </main>
 
@@ -148,21 +139,8 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 <script type="module">
 "use strict";
 
-let initializeApp, getFirestore, doc, setDoc, onSnapshot;
-
-try {
-  const appModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
-  const fsModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-  initializeApp = appModule.initializeApp;
-  getFirestore = fsModule.getFirestore;
-  doc = fsModule.doc;
-  setDoc = fsModule.setDoc;
-  onSnapshot = fsModule.onSnapshot;
-  console.log("✅ Firebase modules loaded");
-} catch(e) {
-  console.error("❌ Firebase load failed:", e);
-  alert("Firebase konnte nicht geladen werden: " + e.message);
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   projectId: "strategic-bus-gtgzl",
@@ -173,23 +151,8 @@ const firebaseConfig = {
   messagingSenderId: "223160037293"
 };
 
-let app, db;
-try {
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
-  window.db = db;
-  console.log("✅ Firebase initialized with custom DB");
-} catch(e) {
-  console.error("❌ Firebase init failed with custom DB, trying default:", e);
-  try {
-    db = getFirestore(app);
-    window.db = db;
-    console.log("✅ Firebase initialized with default DB");
-  } catch(e2) {
-    console.error("❌ Firebase init completely failed:", e2);
-    alert("Firebase Initialisierung fehlgeschlagen: " + e2.message);
-  }
-}
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
 
 /* ---------- Stammdaten ---------- */
 const TEAMS = [
@@ -227,39 +190,52 @@ function blank(){
   return {players, games:{}};
 }
 
-let docRef = null;
-if (db) {
-  try {
-    docRef = doc(db, "tournament", "state");
-    window.docRef = docRef;
-    onSnapshot(docRef, (docSnap) => {
-      console.log("📡 Firebase snapshot received");
-      if (docSnap.exists()) {
-        const d = docSnap.data();
-        const b = blank();
-        S = {players:Object.assign(b.players,d.players||{}), games:d.games||{}};
-      } else {
-        S = blank();
-      }
-      renderAll();
-    }, (error) => {
-      console.error("❌ Firebase snapshot error:", error);
-      alert("Firebase Fehler: " + error.message);
-    });
-  } catch(e) {
-    console.error("❌ Firebase docRef failed:", e);
-    alert("Firebase docRef Fehler: " + e.message);
-  }
-}
+const docRef = doc(db, "tournament", "state");
+onSnapshot(docRef, (docSnap) => {
+  let fbData = docSnap.exists() ? docSnap.data() : null;
+  let hasLocalData = false;
 
-function save(){
-  setDoc(docRef, S).then(()=>{
-    const msg = document.createElement('div');
-    msg.style.cssText = 'position:fixed;top:12px;right:12px;background:#28a745;color:#fff;padding:10px 14px;border-radius:6px;font-size:12px;z-index:9999;opacity:0.9';
-    msg.textContent = '✅ Daten zum Server hochgeladen';
-    document.body.appendChild(msg);
-    setTimeout(()=>msg.remove(), 2000);
-  }).catch(e=>console.error('Firebase error:', e));
+  try {
+    const rawLocal = localStorage.getItem(KEY);
+    if (rawLocal) {
+      const localData = JSON.parse(rawLocal);
+      if (!fbData) fbData = blank();
+      fbData.players = Object.assign(fbData.players || {}, localData.players || {});
+      fbData.games = Object.assign(fbData.games || {}, localData.games || {});
+      hasLocalData = true;
+      localStorage.removeItem(KEY);
+      console.log("Lokale Daten zu Firebase migriert.");
+    }
+  } catch (e) {
+    console.error("Fehler bei der Migration lokaler Daten:", e);
+  }
+
+  if (fbData) {
+    const b = blank();
+    S = {players:Object.assign(b.players,fbData.players||{}), games:fbData.games||{}};
+  } else {
+    S = blank();
+  }
+  
+  renderAll();
+  
+  if (hasLocalData) {
+    save();
+  }
+}, (error) => {
+  console.error("Firebase Snapshot Error:", error);
+  const errBox = document.createElement('div');
+  errBox.style = "background:#ffe8e8;color:#c00;padding:15px;margin:10px;border-radius:8px;font-weight:bold;";
+  errBox.innerHTML = `⚠️ Firebase Ladefehler: ${error.message}`;
+  document.body.prepend(errBox);
+});
+
+function save(){ 
+  setDoc(docRef, S).catch(error => {
+    console.error("Firebase Save Error:", error);
+    const box = document.getElementById('f-msg');
+    if (box) box.innerHTML = `<div class="msg err">⚠️ Firebase Speicherfehler: ${error.message}</div>`;
+  });
 }
 
 /* ---------- Helfer ---------- */
@@ -282,9 +258,8 @@ function pts(res){ return res==='1'?[1,0] : res==='='?[0.5,0.5] : res==='0'?[0,1
 function validUrl(u){
   try{
     const x=new URL(u);
-    const isChesscom = x.hostname.includes('chess.com');
-    const hasGamePath = /\/(live|daily)\/game\/[0-9]+/.test(x.pathname) || /\/game\/(live|daily)\/[0-9]+/.test(x.pathname);
-    return isChesscom && hasGamePath && /^https?:$/.test(x.protocol);
+    const hasGame = /\/(live|daily)\/game\/[0-9]+/.test(x.pathname) || /\/game\/(live|daily)\/[0-9]+/.test(x.pathname);
+    return x.hostname.includes('chess.com') && hasGame && /^https?:$/.test(x.protocol);
   }
   catch(e){ return false; }
 }
@@ -362,8 +337,8 @@ function boardHtml(r, mi, m, b){
     </div>`;
   let body = '';
   if(g && g.res==='dnf'){
-    body = `<div class="row"><span class="nm">🚫 Gegner nicht erschienen</span><span class="pt">-</span></div>`;
-  }else{
+    body = `<div class="row"><span class="nm">🚫 Gegner nicht erschienen</span><span class="pt">1-0</span></div>`;
+  } else {
     body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
   }
   let sub = '';
@@ -377,7 +352,7 @@ function boardHtml(r, mi, m, b){
     const sel = v => g.res===v ? ' selected':'';
     edit = `<div class="edit" data-k="${k}">
       <div class="g">
-        <select class="e-res"><option value="1"${sel('1')}>Sieg ${esc(T[h].name)}</option><option value="="${sel('=')}>Remis</option><option value="0"${sel('0')}>Sieg ${esc(T[a].name)}</option></select>
+        <select class="e-res"><option value="1"${sel('1')}>Sieg ${esc(T[h].name)}</option><option value="="${sel('=')}>Remis</option><option value="0"${sel('0')}>Sieg ${esc(T[a].name)}</option><option value="dnf"${sel('dnf')}>🚫 DNF</option></select>
         <input class="e-url" placeholder="Link..." value="${esc(g.url||'')}">
       </div>
       <div class="g">
@@ -458,15 +433,15 @@ function submitResult(){
 
   if(!res) return err('Bitte ein Ergebnis auswählen.');
   if(res !== 'dnf' && !url) return err('Bitte einen chess.com Link angeben.');
-  if(res !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — muss chess.com/game/live/ oder chess.com/game/daily/ sein.');
+  if(res !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — muss chess.com/live/game/[ID] oder chess.com/game/live/[ID] sein.');
 
   const k = gkey(rn,mi,b);
   const existing = S.games[k];
-  if(existing && confirm('Ergebnis überschreiben? '+JSON.stringify(existing))===false) return;
+  if(existing && !confirm('Ergebnis existiert bereits. Überschreiben?')) return;
 
   S.games[k] = {res, url: res==='dnf'?'':url};
   save(); renderAll();
-  box.innerHTML = `<div class="msg good">Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
+  box.innerHTML = `<div class="msg good">✅ Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
   document.getElementById('f-url').value = '';
   document.getElementById('f-res').value = '';
 }
@@ -493,8 +468,8 @@ document.addEventListener('click', e=>{
     const k = box.dataset.k;
     const res = box.querySelector('.e-res').value;
     const url = box.querySelector('.e-url').value.trim();
-    if(!validUrl(url)){ alert('Ungültiger Link (chess.com)'); return; }
-    S.games[k] = {res, url};
+    if(res !== 'dnf' && !validUrl(url)){ alert('Ungültiger chess.com Link'); return; }
+    S.games[k] = {res, url: res==='dnf'?'':url};
     save(); renderAll();
   }
   if(e.target.classList.contains('e-del')){
@@ -506,35 +481,6 @@ document.addEventListener('click', e=>{
     }
   }
 });
-
-/* Export/Import */
-document.getElementById('exp').onclick = ()=>{
-  const blob = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'schachturnier-backup-'+new Date().toISOString().split('T')[0]+'.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
-document.getElementById('imp').onclick = ()=>document.getElementById('impfile').click();
-document.getElementById('impfile').onchange = ev=>{
-  const f = ev.target.files[0]; if(!f) return;
-  const fr = new FileReader();
-  fr.onload = ()=>{
-    try{
-      const d = JSON.parse(fr.result);
-      if(!d || typeof d!=='object' || !d.games) throw new Error('Ungültiges Format');
-      if(!confirm(''+Object.keys(d.games).length+' Ergebnisse importieren?')) return;
-      S = d;
-      save(); renderAll();
-      alert('✅ Daten importiert!');
-    }catch(e){
-      alert('❌ Fehler: '+e.message);
-    }
-  };
-  fr.readAsText(f);
-  ev.target.value='';
-};
 
 
 /* Start */
