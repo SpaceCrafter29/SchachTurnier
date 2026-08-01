@@ -95,9 +95,9 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
     <div class="card">
       <div class="scroll"><table id="standings"></table></div>
       <div class="legend">
-        <span>MP = Mannschaftspunkte (Sieg 2 / Remis 1)</span>
+        <span>MP = Mannschaftspunkte</span>
         <span>BP = Brettpunkte</span>
-        <span>SB = Sonneborn-Berger (Σ eigene MP × Gegner-MP)</span>
+        <span>SB = Sonneborn-Berger</span>
         <span>Sp = beendete Begegnungen</span>
       </div>
     </div>
@@ -416,22 +416,28 @@ function renderStandings(){
 
 function renderIndividual(){
   const acc = {};
-  TEAMS.forEach(t=>{ acc[t.id]={1:{p:0,g:0},2:{p:0,g:0},3:{p:0,g:0}}; });
+  TEAMS.forEach(t=>{ acc[t.id]={1:{p:0,g:0,matches:[]},2:{p:0,g:0,matches:[]},3:{p:0,g:0,matches:[]}}; });
   ROUNDS.forEach(r=>r.ms.forEach((m,mi)=>{
     for(let b=1;b<=3;b++){
       const g = S.games[gkey(r.nr,mi,b)]; const p = g && pts(g.res);
       if(!p) continue;
-      acc[m[0]][b].p+=p[0]; acc[m[0]][b].g++;
-      acc[m[1]][b].p+=p[1]; acc[m[1]][b].g++;
+      acc[m[0]][b].p+=p[0]; acc[m[0]][b].g++; acc[m[0]][b].matches.push({opp:m[1], pts:p[0]});
+      acc[m[1]][b].p+=p[1]; acc[m[1]][b].g++; acc[m[1]][b].matches.push({opp:m[0], pts:p[1]});
     }
   }));
+  /* SB pro Brett: Σ (eigene Punkte × Gesamt-Punkte des Gegners auf gleichem Brett) */
+  for(let b=1;b<=3;b++){
+    TEAMS.forEach(t=>{
+      acc[t.id][b].sb = acc[t.id][b].matches.reduce((s,mm)=> s + mm.pts * acc[mm.opp][b].p, 0);
+    });
+  }
   let html='';
   for(let b=1;b<=3;b++){
-    const list = TEAMS.map(t=>({t, ...acc[t.id][b]})).sort((x,y)=> y.p-x.p || y.g-x.g);
+    const list = TEAMS.map(t=>({t, ...acc[t.id][b]})).sort((x,y)=> y.p-x.p || y.sb-x.sb || y.g-x.g);
     html += `<div class="tierhdr">Brett ${b} · ${TIER[b]}</div><div class="scroll"><table>
-      <thead><tr><th></th><th class="team">Spieler</th><th>Team</th><th>Partien</th><th>Punkte</th></tr></thead><tbody>` +
+      <thead><tr><th></th><th class="team">Spieler</th><th>Team</th><th>Partien</th><th>Punkte</th><th>SB</th></tr></thead><tbody>` +
       list.map((e,i)=>`<tr><td class="rank">${i+1}</td><td class="team">${esc(playerName(e.t.id,b))}</td>
-        <td>${e.t.flag}</td><td>${e.g}</td><td class="mp">${fmt(e.p)}</td></tr>`).join('') +
+        <td>${e.t.flag}</td><td>${e.g}</td><td class="mp">${fmt(e.p)}</td><td>${fmt(e.sb)}</td></tr>`).join('') +
       `</tbody></table></div>`;
   }
   document.getElementById('individual').innerHTML = html;
