@@ -123,12 +123,12 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
   <section id="tab-melden">
     <h2>Ergebnis melden</h2>
     <div class="card">
-      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung.</div>
+      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com oder lichess.org geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung.</div>
       <label>Runde</label><select id="f-round"></select>
       <label>Begegnung</label><select id="f-match"></select>
       <label>Brett</label><select id="f-board"></select>
       <label>Ergebnis</label><select id="f-res"></select>
-      <label>Link zur Partie</label><input id="f-url" placeholder="https://www.chess.com/game/live/...">
+      <label>Link zur Partie</label><input id="f-url" placeholder="chess.com/live/game/... oder lichess.org/...">
       <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
       <div id="f-msg"></div>
     </div>
@@ -328,15 +328,37 @@ function extractGameId(u){
     return m ? (m[1]||m[2]) : null;
   }catch(e){ return null; }
 }
+function extractGameInfo(u){
+  try{
+    const x=new URL(u);
+    if(x.hostname.includes('chess.com')){
+      const m = x.pathname.match(/(?:live|daily)\/game\/(\d+)|game\/(?:live|daily)\/(\d+)/);
+      if(m) return {source:'chess.com', id:m[1]||m[2]};
+    }
+    if(x.hostname.includes('lichess.org')){
+      const m = x.pathname.match(/^\/([a-zA-Z0-9]{8})(?:[a-zA-Z0-9]{4})?(?:\/|$)/);
+      if(m) return {source:'lichess.org', id:m[1]};
+    }
+    return null;
+  }catch(e){ return null; }
+}
 function validUrl(u){
-  return extractGameId(u) !== null;
+  return extractGameInfo(u) !== null;
 }
 async function verifyChessGame(u){
-  const id = extractGameId(u);
-  if(!id) return {ok:false, msg:'Ungültiges URL-Format'};
+  const info = extractGameInfo(u);
+  if(!info) return {ok:false, msg:'Ungültiges URL-Format (chess.com oder lichess.org)'};
   try{
+    if(info.source === 'lichess.org'){
+      const r = await fetch(`https://lichess.org/api/game/${info.id}`, {cache:'no-store', headers:{'Accept':'application/json'}});
+      if(r.ok){
+        const data = await r.json();
+        if(data && data.id) return {ok:true, data};
+      }
+      return {ok:false, msg:'Partie mit dieser ID existiert nicht auf lichess.org'};
+    }
     const proxy = 'https://corsproxy.io/?';
-    const target = encodeURIComponent(`https://www.chess.com/callback/live/game/${id}`);
+    const target = encodeURIComponent(`https://www.chess.com/callback/live/game/${info.id}`);
     const r = await fetch(proxy+target, {cache:'no-store'});
     if(r.ok){
       const data = await r.json();
@@ -506,8 +528,8 @@ async function submitResult(){
   const info = t => box.innerHTML = `<div class="msg info">${t}</div>`;
 
   if(!res) return err('Bitte ein Ergebnis auswählen.');
-  if(res !== 'dnf' && !url) return err('Bitte einen chess.com Link angeben.');
-  if(res !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — muss chess.com/live/game/[ID] oder chess.com/game/live/[ID] sein.');
+  if(res !== 'dnf' && !url) return err('Bitte einen chess.com oder lichess.org Link angeben.');
+  if(res !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — akzeptiert: chess.com/live/game/[ID] oder lichess.org/[ID]');
 
   const k = gkey(rn,mi,b);
   const existing = S.games[k];
