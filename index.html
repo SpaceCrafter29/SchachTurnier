@@ -148,8 +148,21 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 <script type="module">
 "use strict";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+let initializeApp, getFirestore, doc, setDoc, onSnapshot;
+
+try {
+  const appModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+  const fsModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+  initializeApp = appModule.initializeApp;
+  getFirestore = fsModule.getFirestore;
+  doc = fsModule.doc;
+  setDoc = fsModule.setDoc;
+  onSnapshot = fsModule.onSnapshot;
+  console.log("✅ Firebase modules loaded");
+} catch(e) {
+  console.error("❌ Firebase load failed:", e);
+  alert("Firebase konnte nicht geladen werden: " + e.message);
+}
 
 const firebaseConfig = {
   projectId: "strategic-bus-gtgzl",
@@ -160,9 +173,23 @@ const firebaseConfig = {
   messagingSenderId: "223160037293"
 };
 
-const app = initializeApp(firebaseConfig);
-window.db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
-const db = window.db;
+let app, db;
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+  window.db = db;
+  console.log("✅ Firebase initialized with custom DB");
+} catch(e) {
+  console.error("❌ Firebase init failed with custom DB, trying default:", e);
+  try {
+    db = getFirestore(app);
+    window.db = db;
+    console.log("✅ Firebase initialized with default DB");
+  } catch(e2) {
+    console.error("❌ Firebase init completely failed:", e2);
+    alert("Firebase Initialisierung fehlgeschlagen: " + e2.message);
+  }
+}
 
 /* ---------- Stammdaten ---------- */
 const TEAMS = [
@@ -200,18 +227,30 @@ function blank(){
   return {players, games:{}};
 }
 
-window.docRef = doc(window.db, "tournament", "state");
-const docRef = window.docRef;
-onSnapshot(docRef, (docSnap) => {
-  if (docSnap.exists()) {
-    const d = docSnap.data();
-    const b = blank();
-    S = {players:Object.assign(b.players,d.players||{}), games:d.games||{}};
-  } else {
-    S = blank();
+let docRef = null;
+if (db) {
+  try {
+    docRef = doc(db, "tournament", "state");
+    window.docRef = docRef;
+    onSnapshot(docRef, (docSnap) => {
+      console.log("📡 Firebase snapshot received");
+      if (docSnap.exists()) {
+        const d = docSnap.data();
+        const b = blank();
+        S = {players:Object.assign(b.players,d.players||{}), games:d.games||{}};
+      } else {
+        S = blank();
+      }
+      renderAll();
+    }, (error) => {
+      console.error("❌ Firebase snapshot error:", error);
+      alert("Firebase Fehler: " + error.message);
+    });
+  } catch(e) {
+    console.error("❌ Firebase docRef failed:", e);
+    alert("Firebase docRef Fehler: " + e.message);
   }
-  renderAll();
-});
+}
 
 function save(){
   setDoc(docRef, S).then(()=>{
