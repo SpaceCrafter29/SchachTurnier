@@ -129,7 +129,14 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       <label>Begegnung</label><select id="f-match"></select>
       <label>Brett</label><select id="f-board"></select>
       <label>Ergebnis</label><select id="f-res"></select>
-      <label>Link zur Partie</label><input id="f-url" placeholder="chess.com/live/game/... oder lichess.org/...">
+      <label>Partie-Status</label>
+      <select id="f-type" onchange="document.getElementById('url-wrap').style.display=this.value==='dnf'?'none':'block'">
+        <option value="played">Gespielt (Link erforderlich)</option>
+        <option value="dnf">Gegner nicht erschienen (Kampflos)</option>
+      </select>
+      <div id="url-wrap">
+        <label>Link zur Partie</label><input id="f-url" placeholder="chess.com/live/game/... oder lichess.org/...">
+      </div>
       <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
       <div id="f-msg"></div>
     </div>
@@ -457,16 +464,17 @@ function boardHtml(r, mi, m, b){
       <span class="pt">${val}</span>
     </div>`;
   let body = '';
-  if(g && g.res==='dnf'){
-    body = `<div class="row"><span class="nm">🚫 Gegner nicht erschienen</span><span class="pt">1-0</span></div>`;
+  if((g && g.dnf) || (g && g.res === 'dnf')){
+    body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
   } else {
     body = line(h,b,true, p?fmt(p[0]):'–') + line(a,b,false, p?fmt(p[1]):'–');
   }
   let sub = '';
   if(g){
+    const isDnf = g.dnf || g.res === 'dnf';
     sub = `<div class="sub">
       <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
-      ${g.res==='dnf' ? '🚫 DNF' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : '')}
+      ${isDnf ? '🚫 Kampflos' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : '')}
       ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
     </div>`;
   }else{
@@ -528,8 +536,7 @@ function fillRes(){
     `<option value="">– bitte wählen –</option>
      <option value="1">Sieg ${esc(T[m[0]].name)}</option>
      <option value="=">Remis</option>
-     <option value="0">Sieg ${esc(T[m[1]].name)}</option>
-     <option value="dnf">🚫 Gegner nicht erschienen</option>`;
+     <option value="0">Sieg ${esc(T[m[1]].name)}</option>`;
 }
 async function submitResult(){
   const box = document.getElementById('f-msg');
@@ -538,33 +545,36 @@ async function submitResult(){
   const mi = +document.getElementById('f-match').value;
   const b  = +document.getElementById('f-board').value;
   const res = document.getElementById('f-res').value;
+  const type = document.getElementById('f-type').value;
   const url = document.getElementById('f-url').value.trim();
   const err = t => box.innerHTML = `<div class="msg err">${t}</div>`;
   const info = t => box.innerHTML = `<div class="msg info">${t}</div>`;
 
   if(!res) return err('Bitte ein Ergebnis auswählen.');
-  if(res !== 'dnf' && !url) return err('Bitte einen chess.com oder lichess.org Link angeben.');
-  if(res !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — akzeptiert: chess.com/live/game/[ID] oder lichess.org/[ID]');
+  if(type !== 'dnf' && !url) return err('Bitte einen chess.com oder lichess.org Link angeben.');
+  if(type !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — akzeptiert: chess.com/live/game/[ID] oder lichess.org/[ID]');
 
   const k = gkey(rn,mi,b);
   const existing = S.games[k];
   if(existing && !confirm('Ergebnis existiert bereits. Überschreiben?')) return;
 
-  if(res !== 'dnf'){
+  if(type !== 'dnf'){
     btn.disabled = true;
-    info('⏳ Prüfe chess.com Partie...');
+    info('⏳ Prüfe Partie...');
     const check = await verifyChessGame(url);
     btn.disabled = false;
     if(!check.ok){ return err('❌ '+check.msg); }
     if(check.msg) info('⚠️ '+check.msg);
   }
 
-  S.games[k] = {res, url: res==='dnf'?'':url};
+  S.games[k] = {res, url: type==='dnf'?'':url, dnf: type==='dnf'};
   updateGameInFirebase(k, S.games[k]);
   renderAll();
   box.innerHTML = `<div class="msg good">✅ Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
   document.getElementById('f-url').value = '';
   document.getElementById('f-res').value = '';
+  document.getElementById('f-type').value = 'played';
+  document.getElementById('url-wrap').style.display = 'block';
 }
 
 
