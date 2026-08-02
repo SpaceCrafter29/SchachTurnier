@@ -340,8 +340,17 @@ function extractGameInfo(u){
   try{
     const x=new URL(u);
     if(x.hostname.includes('chess.com')){
-      const m = x.pathname.match(/(?:live|daily)\/game\/(\d+)|game\/(?:live|daily)\/(\d+)/);
-      if(m) return {source:'chess.com', id:m[1]||m[2]};
+      const parts = x.pathname.split('/').filter(Boolean);
+      const gi = parts.indexOf('game');
+      if(gi >= 0){
+        const next = parts[gi+1];
+        if(/^\d+$/.test(next)) return {source:'chess.com', id:next};
+        if((next==='live'||next==='daily') && /^\d+$/.test(parts[gi+2])) return {source:'chess.com', id:parts[gi+2], type:next};
+      }
+      const li = parts.indexOf('live');
+      if(li >= 0 && parts[li+1]==='game' && /^\d+$/.test(parts[li+2])) return {source:'chess.com', id:parts[li+2], type:'live'};
+      const di = parts.indexOf('daily');
+      if(di >= 0 && parts[di+1]==='game' && /^\d+$/.test(parts[di+2])) return {source:'chess.com', id:parts[di+2], type:'daily'};
     }
     if(x.hostname.includes('lichess.org')){
       const m = x.pathname.match(/^\/([a-zA-Z0-9]{8})(?:[a-zA-Z0-9]{4})?(?:\/|$)/);
@@ -366,11 +375,14 @@ async function verifyChessGame(u){
       return {ok:false, msg:'Partie mit dieser ID existiert nicht auf lichess.org'};
     }
     const proxy = 'https://corsproxy.io/?';
-    const target = encodeURIComponent(`https://www.chess.com/callback/live/game/${info.id}`);
-    const r = await fetch(proxy+target, {cache:'no-store'});
-    if(r.ok){
-      const data = await r.json();
-      if(data && (data.game || data.players)) return {ok:true, data};
+    const types = info.type ? [info.type] : ['live','daily'];
+    for(const t of types){
+      const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${info.id}`);
+      const r = await fetch(proxy+target, {cache:'no-store'});
+      if(r.ok){
+        const data = await r.json();
+        if(data && (data.game || data.players)) return {ok:true, data};
+      }
     }
     return {ok:false, msg:'Partie mit dieser ID existiert nicht auf chess.com'};
   }catch(e){
