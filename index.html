@@ -418,7 +418,7 @@ function computeStandings(){
   TEAMS.forEach(t=>{
     st[t.id].sb = st[t.id].matches.reduce((s,m)=> s + m.bp * st[m.opp].mp, 0);
   });
-  return Object.values(st).sort((x,y)=> y.sb-x.sb || y.mp-x.mp || y.bp-x.bp || T[x.id].name.localeCompare(T[y.id].name));
+  return Object.values(st).sort((x,y)=> y.mp-x.mp || y.bp-x.bp || y.sb-x.sb || T[x.id].name.localeCompare(T[y.id].name));
 }
 
 function renderStandings(){
