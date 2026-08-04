@@ -6,7 +6,8 @@
     "start": "node bot.js",
     "test": "node test.js",
     "list-groups": "node list-groups.js",
-    "find-group": "node find-group-id.js"
+    "find-group": "node find-group-id.js",
+    "setup-session": "node setup-with-session.js"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.25.0",

@@ -1,8 +1,9 @@
-import { Client } from 'whatsapp-web.js';
+import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -43,7 +44,9 @@ let whatsappClient;
 let lastSentTime = null;
 let unplayedMatches = [];
 
-const client = new Client();
+const client = new Client({
+  authStrategy: new LocalAuth()
+});
 
 client.on('qr', (qr) => {
   console.log('📱 QR-Code zum Scannen:\n');
