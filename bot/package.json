@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node bot.js",
     "test": "node test.js",
-    "list-groups": "node list-groups.js"
+    "list-groups": "node list-groups.js",
+    "find-group": "node find-group-id.js"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.25.0",
