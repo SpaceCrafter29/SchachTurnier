@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node bot.js",
+    "test": "node test.js",
     "list-groups": "node list-groups.js"
   },
   "dependencies": {
