@@ -162,7 +162,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
         <b>Mannschaftspunkte</b> sind die Hauptpunktzahl. Tiebreaks:
         <ol style="margin:4px 0 0 20px">
           <li>Brettpunkte</li>
-          <li>Sonneborn-Berger (SB): Summe der eigenen Mannschaftspunkte in jedem Match, multipliziert mit den Mannschaftspunkten des Gegners in demselben Match. (0×2=0, 1×1=1, 2×0=0)</li>
+          <li>Sonneborn-Berger (SB): Summe der Brettpunkte in jedem Match, multipliziert mit den Mannschaftspunkten des Gegners. (Olympiade-Variante)</li>
           <li>Ratingtiebreak</li>
         </ol>
       </div>
@@ -410,16 +410,13 @@ function computeStandings(){
       else if(hb<ab){ st[a].w++; st[h].l++; amp=2; }
       else { st[h].d++; st[a].d++; hmp=1; amp=1; }
       st[h].mp+=hmp; st[a].mp+=amp;
-      st[h].matches.push({opp:a, mp:hmp});
-      st[a].matches.push({opp:h, mp:amp});
+      st[h].matches.push({opp:a, mp:hmp, bp:hb});
+      st[a].matches.push({opp:h, mp:amp, bp:ab});
     }
   }));
-  /* Sonneborn-Berger: Summe (eigene MP im Match × Gegner-MP im selben Match) */
+  /* Olympiade-Sonneborn-Berger: Summe (Brettpunkte × Gegner's Mannschaftspunkte) */
   TEAMS.forEach(t=>{
-    st[t.id].sb = st[t.id].matches.reduce((s,m)=> {
-      const oppMp = 2 - m.mp; // Gegner bekommt 2-m.mp (wenn wir 2 bekommen, bekommen sie 0)
-      return s + m.mp * oppMp;
-    }, 0);
+    st[t.id].sb = st[t.id].matches.reduce((s,m)=> s + m.bp * st[m.opp].mp, 0);
   });
   return Object.values(st).sort((x,y)=> y.sb-x.sb || y.mp-x.mp || y.bp-x.bp || T[x.id].name.localeCompare(T[y.id].name));
 }
@@ -443,14 +440,14 @@ function renderIndividual(){
     for(let b=1;b<=3;b++){
       const g = S.games[gkey(r.nr,mi,b)]; const p = g && pts(g.res);
       if(!p) continue;
-      acc[m[0]][b].p+=p[0]; acc[m[0]][b].g++; acc[m[0]][b].matches.push({opp:m[1], pts:p[0], oppPts:p[1]});
-      acc[m[1]][b].p+=p[1]; acc[m[1]][b].g++; acc[m[1]][b].matches.push({opp:m[0], pts:p[1], oppPts:p[0]});
+      acc[m[0]][b].p+=p[0]; acc[m[0]][b].g++; acc[m[0]][b].matches.push({opp:m[1], pts:p[0]});
+      acc[m[1]][b].p+=p[1]; acc[m[1]][b].g++; acc[m[1]][b].matches.push({opp:m[0], pts:p[1]});
     }
   }));
-  /* SB pro Brett: Σ (eigene Punkte × Gegners Punkte im selben Spiel) */
+  /* SB pro Brett: Σ (Brettpunkte aus Spiel × Gegners Gesamt-Brettpunkte auf diesem Brett) */
   for(let b=1;b<=3;b++){
     TEAMS.forEach(t=>{
-      acc[t.id][b].sb = acc[t.id][b].matches.reduce((s,mm)=> s + mm.pts * mm.oppPts, 0);
+      acc[t.id][b].sb = acc[t.id][b].matches.reduce((s,mm)=> s + mm.pts * acc[mm.opp][b].p, 0);
     });
   }
   let html='';
