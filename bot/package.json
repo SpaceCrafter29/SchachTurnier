@@ -7,7 +7,8 @@
     "test": "node test.js",
     "list-groups": "node list-groups.js",
     "find-group": "node find-group-id.js",
-    "setup-session": "node setup-with-session.js"
+    "setup-session": "node setup-with-session.js",
+    "auto-setup": "node auto-setup.js"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.25.0",
