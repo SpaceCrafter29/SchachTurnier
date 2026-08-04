@@ -1,0 +1,15 @@
+{
+  "name": "schachturnier-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js",
+    "list-groups": "node list-groups.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.25.0",
+    "qrcode-terminal": "^0.12.0",
+    "firebase": "^10.12.5",
+    "dotenv": "^16.4.5"
+  }
+}
