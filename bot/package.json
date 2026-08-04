@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node bot.js",
-    "test": "node test.js",
-    "setup": "node simple-setup.js"
+    "init": "node init-bot.js",
+    "start": "node bot.js"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.25.0",
