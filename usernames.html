@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chess Olympics – Usernames</title>
+<style>
+:root{ --bg:#f5f5f5; --panel:#fff; --line:#d0d0d0; --txt:#222; --muted:#666; --accent:#ff8c00; --ok:#28a745; --warn:#b26a00; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}
+.note{font-size:12px;color:var(--muted);margin-bottom:14px}
+button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:14px}
+button:disabled{opacity:.5}
+#log{font-size:12px;color:var(--muted);margin:10px 0;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse;margin-top:14px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:6px 8px;font-size:13px;text-align:left}
+th{background:#e0e0e0;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.conflict{color:#c00;font-weight:700}
+.missing{color:var(--muted);font-style:italic}
+.src{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<h1>♟️ Chess Olympics – Spieler-Usernames</h1>
+<div class="note">Liest alle gemeldeten Partie-Links (chess.com / lichess.org) aus und ermittelt daraus die Usernames pro Team &amp; Brett (über Weiß/Schwarz-Zuordnung: Heimteam hat Brett&nbsp;1+3 Schwarz, Brett&nbsp;2 Weiß).</div>
+
+<button id="start">Usernames laden</button>
+<div id="log"></div>
+<table id="out" style="display:none">
+  <thead><tr><th>Team</th><th>Brett</th><th>Chess.com / Lichess Username</th><th>Quelle</th></tr></thead>
+  <tbody id="body"></tbody>
+</table>
+
+<script type="module">
+"use strict";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  projectId: "strategic-bus-gtgzl",
+  appId: "1:223160037293:web:05722321bf1f676a477b24",
+  apiKey: "AIzaSyAnnacfE_oBHBFAVytJfB2jjYyg883PpZ0",
+  authDomain: "strategic-bus-gtgzl.firebaseapp.com",
+  storageBucket: "strategic-bus-gtgzl.firebasestorage.app",
+  messagingSenderId: "223160037293"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+
+const TEAMS = [
+  {id:'nor', name:'Norwegen',        flag:'🇳🇴'},
+  {id:'prk', name:'Nordkorea',       flag:'🇰🇵'},
+  {id:'vat', name:'Vatikan',         flag:'🇻🇦'},
+  {id:'uzb', name:'Uzbekistan',      flag:'🇺🇿'},
+  {id:'ant', name:'Antigua',         flag:'🇦🇬'},
+  {id:'chn', name:'China',           flag:'🇨🇳'},
+  {id:'bar', name:'Barbuda',         flag:'🏝️'},
+  {id:'gat', name:'Gatzendimension', flag:'🌀'}
+];
+const T = Object.fromEntries(TEAMS.map(t=>[t.id,t]));
+
+const ROUNDS = [
+  {nr:1, ms:[['nor','uzb'],['vat','bar'],['prk','chn'],['gat','ant']]},
+  {nr:2, ms:[['uzb','ant'],['chn','gat'],['bar','prk'],['nor','vat']]},
+  {nr:3, ms:[['vat','uzb'],['prk','nor'],['gat','bar'],['ant','chn']]},
+  {nr:4, ms:[['uzb','chn'],['bar','ant'],['nor','gat'],['vat','prk']]},
+  {nr:5, ms:[['prk','uzb'],['gat','vat'],['ant','nor'],['chn','bar']]},
+  {nr:6, ms:[['vat','ant'],['nor','chn'],['uzb','bar'],['prk','gat']]},
+  {nr:7, ms:[['gat','uzb'],['ant','prk'],['chn','vat'],['bar','nor']]}
+];
+const homeIsWhite = b => b===2; // Heim (erstgenannt): Brett 1+3 Schwarz, Brett 2 Weiß
+
+function extractGameInfo(u){
+  try{
+    const x=new URL(u);
+    if(x.hostname.includes('chess.com')){
+      const parts = x.pathname.split('/').filter(Boolean);
+      const gi = parts.indexOf('game');
+      if(gi >= 0){
+        const next = parts[gi+1];
+        if(/^\d+$/.test(next)) return {source:'chess.com', id:next};
+        if((next==='live'||next==='daily') && /^\d+$/.test(parts[gi+2])) return {source:'chess.com', id:parts[gi+2], type:next};
+      }
+      const li = parts.indexOf('live');
+      if(li >= 0 && parts[li+1]==='game' && /^\d+$/.test(parts[li+2])) return {source:'chess.com', id:parts[li+2], type:'live'};
+      const di = parts.indexOf('daily');
+      if(di >= 0 && parts[di+1]==='game' && /^\d+$/.test(parts[di+2])) return {source:'chess.com', id:parts[di+2], type:'daily'};
+    }
+    if(x.hostname.includes('lichess.org')){
+      const m = x.pathname.match(/^\/([a-zA-Z0-9]{8})(?:[a-zA-Z0-9]{4})?(?:\/|$)/);
+      if(m) return {source:'lichess.org', id:m[1]};
+    }
+    return null;
+  }catch(e){ return null; }
+}
+
+function parsePgnHeaders(pgn){
+  const w = pgn.match(/\[White\s+"([^"]*)"\]/);
+  const b = pgn.match(/\[Black\s+"([^"]*)"\]/);
+  return {white: w ? w[1] : null, black: b ? b[1] : null};
+}
+
+async function fetchPlayers(info){
+  if(info.source === 'lichess.org'){
+    const r = await fetch(`https://lichess.org/game/export/${info.id}?literate=false`, {cache:'no-store', headers:{'Accept':'application/x-chess-pgn'}});
+    if(!r.ok) throw new Error('lichess HTTP '+r.status);
+    const pgn = await r.text();
+    const h = parsePgnHeaders(pgn);
+    if(!h.white || !h.black) throw new Error('PGN ohne Header');
+    return h;
+  }
+  const proxy = 'https://corsproxy.io/?';
+  const types = info.type ? [info.type] : ['live','daily'];
+  let lastErr;
+  for(const t of types){
+    try{
+      const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${info.id}`);
+      const r = await fetch(proxy+target, {cache:'no-store'});
+      if(!r.ok){ lastErr = new Error('HTTP '+r.status); continue; }
+      const data = await r.json();
+      const ph = data?.game?.pgnHeaders;
+      if(ph && ph.White && ph.Black) return {white: ph.White, black: ph.Black};
+      const top = data?.players?.top, bot = data?.players?.bottom;
+      if(top && bot && top.color && bot.color){
+        const w = top.color==='white' ? top : bot;
+        const b = top.color==='white' ? bot : top;
+        if((w.username||w.uname) && (b.username||b.uname)){
+          return {white: w.username||w.uname, black: b.username||b.uname};
+        }
+      }
+      lastErr = new Error('Unerwartetes Antwortformat');
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('chess.com Abfrage fehlgeschlagen');
+}
+
+function log(msg){
+  document.getElementById('log').textContent += msg + '\n';
+}
+
+document.getElementById('start').addEventListener('click', run);
+
+async function run(){
+  const btn = document.getElementById('start');
+  btn.disabled = true;
+  document.getElementById('log').textContent = '';
+  const body = document.getElementById('body');
+  body.innerHTML = '';
+  document.getElementById('out').style.display = '';
+
+  log('Lade Turnierdaten aus Firebase…');
+  const snap = await getDoc(doc(db, "tournament", "state"));
+  if(!snap.exists()){ log('Keine Turnierdaten gefunden.'); btn.disabled=false; return; }
+  const games = snap.data().games || {};
+
+  // team+board -> [{username, round, color}]
+  const found = {};
+  TEAMS.forEach(t => { for(let b=1;b<=3;b++) found[t.id+'-'+b] = []; });
+
+  const keys = Object.keys(games).filter(k => games[k]?.url).sort();
+  log(`${keys.length} gemeldete Partien mit Link gefunden. Frage chess.com/lichess ab…\n`);
+
+  for(const key of keys){
+    const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
+    if(!m) continue;
+    const [, rnr, mi, board] = m.map(Number);
+    const round = ROUNDS.find(r => r.nr === rnr);
+    if(!round) continue;
+    const pairing = round.ms[mi];
+    if(!pairing) continue;
+    const [home, away] = pairing;
+    const whiteTeam = homeIsWhite(board) ? home : away;
+    const blackTeam = homeIsWhite(board) ? away : home;
+
+    const url = games[key].url;
+    const info = extractGameInfo(url);
+    if(!info){ log(`⚠️ ${key}: ungültige URL (${url})`); continue; }
+
+    try{
+      const {white, black} = await fetchPlayers(info);
+      found[whiteTeam+'-'+board].push({username: white, round: rnr, color:'weiß'});
+      found[blackTeam+'-'+board].push({username: black, round: rnr, color:'schwarz'});
+      log(`✅ ${key}: Weiß=${white} (${T[whiteTeam].name}) · Schwarz=${black} (${T[blackTeam].name})`);
+    }catch(e){
+      log(`❌ ${key}: ${e.message}`);
+    }
+    await new Promise(r => setTimeout(r, 300)); // nicht zu schnell abfragen
+  }
+
+  log('\nFertig. Baue Tabelle…');
+
+  TEAMS.forEach(t=>{
+    for(let b=1;b<=3;b++){
+      const entries = found[t.id+'-'+b];
+      const tr = document.createElement('tr');
+      const uniqueNames = [...new Set(entries.map(e=>e.username))];
+      let cell, src;
+      if(uniqueNames.length === 0){
+        cell = '<span class="missing">— keine Partie gefunden —</span>';
+        src = '';
+      } else if(uniqueNames.length === 1){
+        cell = uniqueNames[0];
+        src = entries.map(e=>`R${e.round} (${e.color})`).join(', ');
+      } else {
+        cell = `<span class="conflict">${uniqueNames.join(' / ')}</span>`;
+        src = entries.map(e=>`R${e.round}: ${e.username} (${e.color})`).join('; ');
+      }
+      tr.innerHTML = `<td>${T[t.id].flag} ${T[t.id].name}</td><td>Brett ${b}</td><td>${cell}</td><td class="src">${src}</td>`;
+      body.appendChild(tr);
+    }
+  });
+
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
