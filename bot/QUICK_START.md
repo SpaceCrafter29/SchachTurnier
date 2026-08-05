@@ -1,74 +1,65 @@
-# ⚡ Schnell-Start: Bot mit Session-Daten
+# ⚡ Schnell-Start: WhatsApp Bot Einrichtung
 
-Diese Methode ist **am schnellsten** - kein QR-Code nötig!
+**Zwei einfache Schritte - das war's!**
 
-## 🚀 Super einfach (3 Schritte)
-
-### 1️⃣ Session-Daten eingeben
-
-Du hast von mir Session-Daten bekommen (aus dem QR-Code).
-
-Speichere sie:
-```bash
-node setup-with-session.js
-```
-
-Das Script speichert die Session lokal.
-
-### 2️⃣ `.env` Datei erstellen
+## 🚀 Schritt 1: Setup durchführen (1x)
 
 ```bash
-cp .env.example .env
+cd bot
+npm install
+npm run init
 ```
 
-Editiere `.env` und trage deine **Gruppen-ID** ein:
+Das Script wird:
+1. ✅ WhatsApp Verbindung herstellen
+2. 📱 QR-Code anzeigen (nur beim **ersten Mal**!)
+3. 🔍 "Chess Olympics" Gruppe finden
+4. 📝 `.env` Datei automatisch erstellen
+
+**Output sieht so aus:**
 ```
-WHATSAPP_GROUP_ID=120362047382940238@g.us
-FIREBASE_PROJECT_ID=strategic-bus-gtgzl
-FIREBASE_API_KEY=AIzaSyAnnacfE_oBHBFAVytJfB2jjYyg883PpZ0
-...
+✅ Mit WhatsApp verbunden!
+🔍 Suche "Chess Olympics" Gruppe...
+🎉 GEFUNDEN: Chess Olympics
+   👥 Mitglieder: 8
+   🔑 ID: 120362047382940238@g.us
+✅ .env Datei erstellt!
+🚀 Du kannst jetzt starten: npm start
 ```
 
-### 3️⃣ Bot starten
+## 🚀 Schritt 2: Bot starten (jeden Tag)
 
 ```bash
 npm start
 ```
 
-**Das war's!** ✅ Der Bot läuft jetzt und sendet täglich Nachrichten!
+Der Bot läuft jetzt und sendet:
+- **Täglich um 20:00 Uhr** eine erste Nachricht
+- **Dann stündlich** (10x insgesamt) wenn Matches ausstehen
 
----
+## 📱 Häufige Fragen
 
-## 📱 Oder auf Cloud Run deployen (24/7)
+**Q: Muss ich jedes Mal einen QR-Code scannen?**
+A: Nein! Nur beim ersten `npm run init`. Die Session wird lokal gespeichert.
 
+**Q: Kann ich den Bot 24/7 laufen lassen?**
+A: Ja! Deploy auf Google Cloud Run mit: `bash deploy.sh`
+
+**Q: Die Benachrichtigungen passen nicht?**
+A: Editiere `.env`:
 ```bash
-bash deploy.sh
+NOTIFICATION_HOUR=14    # Um 14:00 Uhr starten
+NOTIFICATIONS_PER_DAY=5 # 5x pro Tag statt 10x
 ```
 
----
+**Q: Neue Gruppen-ID?**
+A: Editiere `.env` WHATSAPP_GROUP_ID und starte `npm start` neu
 
-## ⚠️ Wichtig
+## 🔒 Sicherheit
 
-- **Session-Daten** sind sensitiv → **NICHT öffentlich teilen!**
-- `.wwebjs_auth/` wird im `.gitignore` ignored (sicher)
-- Die Session bleibt lokal/im Bot gespeichert
-
----
-
-## 🔍 Troubleshooting
-
-**Bot sendet keine Nachrichten?**
-```bash
-npm start
-```
-Logs anschauen und fehlende `.env` Variablen überprüfen.
-
-**Neue Gruppen-ID?**
-Editiere `.env` und starte neu:
-```bash
-npm start
-```
+- ⚠️ **Session-Daten NICHT teilen!**
+- `.env` NICHT ins GitHub committen (steht in `.gitignore`)
 
 ---
 
-**Questions?** Siehe `bot/README.md` für mehr Details! 🚀
+**Weitere Details:** `bot/README.md`

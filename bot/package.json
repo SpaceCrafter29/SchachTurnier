@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "init": "node init-bot.js",
+    "init": "node setup.js",
     "start": "node bot.js"
   },
   "dependencies": {
-    "whatsapp-web.js": "^1.25.0",
-    "qrcode-terminal": "^0.12.0",
-    "firebase": "^10.12.5",
-    "dotenv": "^16.4.5"
+    "@open-wa/wa-automate": "^4.76.0",
+    "dotenv": "^16.4.5",
+    "firebase": "^10.12.5"
   }
 }

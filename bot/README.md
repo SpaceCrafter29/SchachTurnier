@@ -2,6 +2,8 @@
 
 Automatische Benachrichtigungen für ausstehende Matches in WhatsApp!
 
+Der Bot nutzt [wa-automate](https://github.com/open-wa/wa-automate-nodejs) für die WhatsApp-Verbindung.
+
 ## 📋 Setup
 
 ### 1. Abhängigkeiten installieren
@@ -10,35 +12,23 @@ cd bot
 npm install
 ```
 
-### 2. Gruppen-ID finden
+### 2. Einmaliges Setup (QR-Code + Gruppe finden)
 ```bash
-npm run list-groups
+npm run init
 ```
 
 Das Script:
 - Zeigt einen QR-Code zum Scannen mit WhatsApp
-- Listet alle deine Gruppen auf
-- Zeigt die Gruppen-ID (z.B. `123456789-1234567890@g.us`)
+- Findet automatisch die Gruppe "Chess Olympics"
+- Erstellt automatisch die `.env` Datei mit allen benötigten Werten
 
-Kopiere die ID von "Chess Olympics".
+Die Session wird lokal gespeichert, sodass beim nächsten Start kein neuer QR-Code nötig ist.
 
-### 3. `.env` Datei erstellen
-```bash
-cp .env.example .env
-```
-
-Bearbeite `.env` und trage ein:
-```
-WHATSAPP_GROUP_ID=123456789-1234567890@g.us
-NOTIFICATION_HOUR=20
-NOTIFICATIONS_PER_DAY=10
-```
-
-**Konfiguration:**
+**Konfiguration** (optional in `.env` anpassbar):
 - `NOTIFICATION_HOUR`: Wann die erste Benachrichtigung des Tages kommt (z.B. 20 = 20:00 Uhr)
 - `NOTIFICATIONS_PER_DAY`: Wie viele Nachrichten pro Tag (z.B. 10 = eine pro Stunde für 10 Stunden)
 
-### 4. Bot starten
+### 3. Bot starten
 ```bash
 npm start
 ```
@@ -72,14 +62,12 @@ npm start
 
 ## ⚙️ Troubleshooting
 
-**"WhatsApp blockiert Zugang"?**
-- Stelle sicher, dass du am PC/Mac die richtige WhatsApp-Instanz öffnest
-- Scanne den QR-Code nur mit der Telefon-WhatsApp-App
-- Der Bot bleibt mit der Sitzung verbunden (`.wwebjs_auth` Ordner)
-
 **Falsche Gruppen-ID?**
-- Führe `npm run list-groups` erneut aus
-- Stelle sicher, dass du die exakte ID kopierst
+- Führe `npm run init` erneut aus (lösche vorher ggf. die gespeicherte Session)
+- Stelle sicher, dass die Gruppe "Chess Olympics" im Namen enthalten ist
+
+**Session neu einrichten?**
+- Lösche den lokalen Session-Ordner und führe `npm run init` erneut aus
 
 ## 🚀 Production Deployment
 
@@ -93,6 +81,8 @@ pm2 save
 pm2 startup
 ```
 
+Für Google Cloud Run siehe `DEPLOY_FIREBASE.md`.
+
 ## 📝 Lizenz & Hinweis
 
-Nutze whatsapp-web.js verantwortungsvoll und beachte WhatsApps Terms of Service!
+Nutze wa-automate verantwortungsvoll und beachte WhatsApps Terms of Service!

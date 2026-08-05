@@ -1,9 +1,7 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
-import qrcode from 'qrcode-terminal';
+import { create } from '@open-wa/wa-automate';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 import dotenv from 'dotenv';
-import fs from 'fs';
 
 dotenv.config();
 
@@ -26,48 +24,36 @@ const ROUNDS = [
   {nr:7, date:'27.08.–29.08.'}
 ];
 
-const TEAMS = {
-  'nor': '🇳🇴 Norwegen',
-  'prk': '🇰🇵 Nordkorea',
-  'vat': '🇻🇦 Vatikan',
-  'uzb': '🇺🇿 Uzbekistan',
-  'ant': '🇦🇬 Antigua',
-  'chn': '🇨🇳 China',
-  'bar': '🏝️ Barbuda',
-  'gat': '🌀 Gatzendimension'
-};
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
 
-let whatsappClient;
+let client;
 let lastSentTime = null;
 let unplayedMatches = [];
+const groupId = process.env.WHATSAPP_GROUP_ID;
 
-const client = new Client({
-  authStrategy: new LocalAuth()
-});
+console.log('🤖 Schach-Turnier WhatsApp-Bot wird gestartet...\n');
 
-client.on('qr', (qr) => {
-  console.log('📱 QR-Code zum Scannen:\n');
-  qrcode.generate(qr, {small: true});
-});
+async function startBot() {
+  try {
+    client = await create({
+      sessionId: 'chess-bot',
+      headless: true,
+      multiDevice: true,
+      autoRefresh: true
+    });
 
-client.on('ready', () => {
-  console.log('✅ WhatsApp-Bot verbunden!\n');
-  console.log(`📱 Sende Benachrichtigungen an: ${process.env.WHATSAPP_GROUP_ID}\n`);
-  whatsappClient = client;
+    console.log('✅ WhatsApp-Bot verbunden!\n');
+    console.log(`📱 Sende Benachrichtigungen an: ${groupId}\n`);
 
-  // Firebase Daten überwachen
-  monitorGames();
+    monitorGames();
+    startDailyNotifications();
 
-  // Täglicher Benachrichtigungsplan starten
-  startDailyNotifications();
-});
-
-client.on('error', (error) => {
-  console.error('❌ WhatsApp Error:', error);
-});
+  } catch (error) {
+    console.error('❌ Fehler beim Bot-Start:', error.message);
+    process.exit(1);
+  }
+}
 
 function monitorGames() {
   const docRef = doc(db, "tournament", "state");
@@ -78,7 +64,6 @@ function monitorGames() {
     unplayedMatches = [];
 
     for(let r = 1; r <= 7; r++) {
-      const round = ROUNDS[r-1];
       for(let m = 0; m < 4; m++) {
         for(let b = 1; b <= 3; b++) {
           const key = `R${r}M${m}B${b}`;
@@ -99,32 +84,24 @@ function startDailyNotifications() {
   const notificationsPerDay = parseInt(process.env.NOTIFICATIONS_PER_DAY) || 10;
   const notificationHour = parseInt(process.env.NOTIFICATION_HOUR) || 20;
 
-  // Jeden Tag um die konfigurierte Zeit starten
   setInterval(async () => {
     const now = new Date();
 
-    // Nur zur konfigurierten Stunde prüfen
     if(now.getHours() !== notificationHour) return;
-    if(lastSentTime && (now - lastSentTime) < 60000) return; // Nur 1x pro Stunde
+    if(lastSentTime && (now - lastSentTime) < 60000) return;
 
-    // Benachrichtigungen alle 1 Stunde senden (notificationsPerDay mal)
     sendNotifications();
     lastSentTime = now;
-  }, 60000); // Jede Minute prüfen
+  }, 60000);
 
   console.log(`⏰ Benachrichtigungen um ${notificationHour}:00 Uhr starten`);
   console.log(`📤 ${notificationsPerDay} Nachrichten pro Tag (1 pro Stunde für ${notificationsPerDay} Stunden)\n`);
 }
 
 async function sendNotifications() {
-  if(!whatsappClient || unplayedMatches.length === 0) return;
-
-  const groupId = process.env.WHATSAPP_GROUP_ID;
+  if(!client || unplayedMatches.length === 0) return;
 
   try {
-    const chat = await whatsappClient.getChatById(groupId);
-
-    // Gruppiere nach Runde
     const byRound = {};
     unplayedMatches.forEach(m => {
       if(!byRound[m.round]) byRound[m.round] = [];
@@ -142,14 +119,12 @@ async function sendNotifications() {
 
     message += `🕐 Nächste Benachrichtigung in 1 Stunde\n`;
 
-    await chat.sendMessage(message);
+    await client.sendText(groupId, message);
     console.log(`✅ Benachrichtigung gesendet: ${unplayedMatches.length} ausstehende Matches`);
 
   } catch (error) {
-    console.error('❌ Fehler beim Senden:', error);
+    console.error('❌ Fehler beim Senden:', error.message);
   }
 }
 
-// Bot starten
-console.log('🤖 Schach-Turnier WhatsApp-Bot wird gestartet...\n');
-client.initialize();
+startBot();

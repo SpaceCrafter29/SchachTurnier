@@ -4,3 +4,8 @@ node_modules/
 .wwebjs_auth/
 .wwebjs_cache/
 *.log
+
+# wa-automate session/cache
+**.data.json
+**.node-persist**
+_IGNORE_
