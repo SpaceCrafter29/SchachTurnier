@@ -89,16 +89,17 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 .ana-players .p .elo{font-size:11px;color:var(--muted)}
 .ana-chart{width:100%;height:90px;border-radius:8px;overflow:hidden;margin-bottom:10px;display:block;background:var(--white)}
 .ana-status{font-size:12.5px;color:var(--muted);text-align:center;padding:26px 0}
-.ana-progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:12px;max-width:220px}
+.ana-progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin:12px auto 0;max-width:220px}
 .ana-progress>div{height:100%;background:var(--accent);width:0%;transition:width .15s}
 .ana-note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 .ana-err{padding:14px;background:#ffe8e8;color:#c00;border-radius:8px;font-size:13px;line-height:1.5}
 
 .chessboard{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid var(--line)}
-.chessboard .sq{display:flex;align-items:center;justify-content:center;aspect-ratio:1;min-width:0;min-height:0}
+.chessboard .sq{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;min-width:0;min-height:0}
 .chessboard .sq.l{background:#f0d9b5}
 .chessboard .sq.d{background:#b58863}
 .chessboard .sq img{width:82%;height:82%;object-fit:contain;pointer-events:none}
+.mv-icon{position:absolute;top:-6%;right:-6%;width:42%;height:42%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:min(3.6vw,15px);font-weight:800;line-height:1;box-shadow:0 0 0 2px var(--panel);pointer-events:none}
 .rv-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .rv-nav .cur{font-size:12.5px;color:var(--muted);text-align:center;flex:1}
 .rv-nav button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-weight:700;cursor:pointer}
@@ -594,6 +595,13 @@ function buildEvalChartSvg(whiteWPs){
 
 const PIECE_VALUE = {p:1,n:3,b:3,r:5,q:9,k:0};
 const BOOK_PLY_WINDOW = 10; /* erste 5 Vollzüge je Seite */
+const MOVE_ICON = {
+  blunder:   {sym:'??', color:'#fff', bg:'#d32f2f'},
+  mistake:   {sym:'?',  color:'#fff', bg:'#e65100'},
+  inacc:     {sym:'?!', color:'#fff', bg:'#c98a00'},
+  brilliant: {sym:'★',  color:'#fff', bg:'#00838f'},
+  book:      {sym:'📖', color:'#fff', bg:'#6a4fb0'}
+};
 
 function isSacrificeMove(fenAfter, toSquare, moverColor, pieceType){
   const val = PIECE_VALUE[pieceType] || 0;
@@ -625,20 +633,26 @@ function classifyMove(loss, isBest, plyIndex, opts){
 function pieceFile(ch){
   return ch === ch.toUpperCase() ? ch+'-white' : ch+'-black';
 }
-function renderBoardHtml(fen){
+function renderBoardHtml(fen, icon){
   const ranks = fen.split(' ')[0].split('/');
   let html = '';
   for(let r=0;r<8;r++){
     let f=0;
     for(const ch of ranks[r]){
       if(/\d/.test(ch)){
-        for(let k=0;k<+ch;k++){ html += `<div class="sq ${(r+f)%2===0?'l':'d'}"></div>`; f++; }
+        for(let k=0;k<+ch;k++){ html += sqHtml(r,f,'',icon); f++; }
       } else {
-        html += `<div class="sq ${(r+f)%2===0?'l':'d'}"><img src="./pieces/${pieceFile(ch)}.svg" alt="${ch}" draggable="false"></div>`; f++;
+        html += sqHtml(r,f,`<img src="./pieces/${pieceFile(ch)}.svg" alt="${ch}" draggable="false">`, icon); f++;
       }
     }
   }
   return `<div class="chessboard">${html}</div>`;
+}
+function sqHtml(r,f,inner,icon){
+  const square = 'abcdefgh'[f] + (8-r);
+  const badge = (icon && icon.square === square)
+    ? `<span class="mv-icon" style="color:${icon.color};background:${icon.bg}">${icon.sym}</span>` : '';
+  return `<div class="sq ${(r+f)%2===0?'l':'d'}">${inner}${badge}</div>`;
 }
 
 let currentAnalysis = null;
@@ -666,6 +680,8 @@ function renderMoveReview(ply){
   if(!d) return;
   const body = document.getElementById('ana-body');
   const fen = d.fens[ply];
+  const lastMove = ply>0 ? d.moves[ply-1] : null;
+  const icon = (lastMove && lastMove.to && MOVE_ICON[lastMove.cls]) ? {square: lastMove.to, ...MOVE_ICON[lastMove.cls]} : null;
   const rows = d.moves.map((mv,i)=>`
     <div class="mv-row ${i===ply-1?'active':''}" onclick="openMoveReview(${i+1})">
       <span class="no">${Math.floor(i/2)+1}${i%2===0?'.':'…'}</span>
@@ -673,7 +689,7 @@ function renderMoveReview(ply){
       <span class="mv-badge ${mv.cls}">${mv.label}</span>
     </div>`).join('');
   body.innerHTML = `
-    ${renderBoardHtml(fen)}
+    ${renderBoardHtml(fen, icon)}
     <div class="rv-nav">
       <button onclick="openMoveReview(${ply-1})" ${ply<=0?'disabled':''}>◀</button>
       <span class="cur">${ply===0?'Startstellung':(d.moves[ply-1].whiteIsMover?'⚪':'⚫')+' '+esc(d.moves[ply-1].san)}</span>
@@ -682,6 +698,8 @@ function renderMoveReview(ply){
     <div class="mv-list">${rows}</div>
     <div class="btnrow"><button class="btn sec sm" onclick="backToSummary()">← Zurück zur Übersicht</button></div>
   `;
+  const activeRow = body.querySelector('.mv-row.active');
+  if(activeRow) activeRow.scrollIntoView({block:'nearest'});
 }
 window.openMoveReview = function(ply){
   if(!currentAnalysis) return;
@@ -789,7 +807,7 @@ async function openAnalysis(key){
       const {cls, label} = classifyMove(Math.max(0,loss), isBest, i, {
         isSacrifice, moverWinBefore: before, moverWinAfter: after
       });
-      moves.push({san: hist[i].san, whiteIsMover, cls, label});
+      moves.push({san: hist[i].san, to: hist[i].to, whiteIsMover, cls, label});
     }
     const avg = arr => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
     const accWhite = accuracies?.white ?? avg(accWhiteMoves);
