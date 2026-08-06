@@ -617,7 +617,10 @@ const MOVE_ICON = {
   mistake:   {sym:'?',  color:'#fff', bg:'#e65100'},
   inacc:     {sym:'?!', color:'#fff', bg:'#c98a00'},
   brilliant: {sym:'★',  color:'#fff', bg:'#00838f'},
-  book:      {sym:'📖', color:'#fff', bg:'#6a4fb0'}
+  book:      {sym:'📖', color:'#fff', bg:'#6a4fb0'},
+  best:      {sym:'✓',  color:'#fff', bg:'#1565c0'},
+  excellent: {sym:'✓',  color:'#fff', bg:'#00796b'},
+  good:      {sym:'👍', color:'#fff', bg:'#2e7d32'}
 };
 
 function isSacrificeMove(fenAfter, toSquare, moverColor, pieceType){
@@ -640,7 +643,7 @@ function classifyMove(loss, isBest, plyIndex, opts){
   if(loss>=5)  return {cls:'inacc', label:'Ungenauigkeit ?!'};
   const inBook = plyIndex < BOOK_PLY_WINDOW;
   if(isBest && opts.isSacrifice && !inBook && opts.moverWinBefore>15 && opts.moverWinBefore<85 && opts.moverWinAfter>=55){
-    return {cls:'brilliant', label:'Brillant !!'};
+    return {cls:'brilliant', label:'Brillant ★'};
   }
   if(inBook) return {cls:'book', label:'Theoriezug'};
   if(isBest && loss<1) return {cls:'best', label:'Bester Zug'};
