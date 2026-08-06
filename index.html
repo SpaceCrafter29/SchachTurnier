@@ -93,6 +93,28 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 .ana-progress>div{height:100%;background:var(--accent);width:0%;transition:width .15s}
 .ana-note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 .ana-err{padding:14px;background:#ffe8e8;color:#c00;border-radius:8px;font-size:13px;line-height:1.5}
+
+.chessboard{display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid var(--line)}
+.chessboard .sq{display:flex;align-items:center;justify-content:center;font-size:min(6.5vw,26px);line-height:1;aspect-ratio:1}
+.chessboard .sq.l{background:#f0d9b5}
+.chessboard .sq.d{background:#b58863}
+.rv-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.rv-nav .cur{font-size:12.5px;color:var(--muted);text-align:center;flex:1}
+.rv-nav button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-weight:700;cursor:pointer}
+.rv-nav button:disabled{opacity:.4;cursor:not-allowed}
+.mv-list{max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+.mv-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+.mv-row:last-child{border-bottom:0}
+.mv-row.active{background:var(--panel2)}
+.mv-row .no{color:var(--muted);width:34px;flex:none;font-variant-numeric:tabular-nums}
+.mv-row .san{font-weight:700;flex:1}
+.mv-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
+.mv-badge.best{color:#1565c0;background:#e3f2fd}
+.mv-badge.excellent{color:#00796b;background:#e0f2f1}
+.mv-badge.good{color:#2e7d32;background:#e8f5e9}
+.mv-badge.inacc{color:#b26a00;background:#fff4e5}
+.mv-badge.mistake{color:#e65100;background:#ffe0b2}
+.mv-badge.blunder{color:#c00;background:#ffe8e8}
 </style>
 </head>
 <body>
@@ -465,7 +487,8 @@ function evalFen(fen){
         else if(cpM) lastScore = {cp:+cpM[1]};
       } else if(line.startsWith('bestmove')){
         sfWorker.removeEventListener('message', onMsg);
-        resolve(lastScore || {cp:0});
+        const bmM = line.match(/^bestmove (\S+)/);
+        resolve({score: lastScore || {cp:0}, bestmove: bmM ? bmM[1] : null});
       }
     };
     sfWorker.addEventListener('message', onMsg);
@@ -497,13 +520,21 @@ function roughElo(acc){
   if(acc>=40) return '~600–900';
   return '< 600';
 }
+/* Echte Wertung (falls in den Partie-Daten vorhanden) statt grober Schätzung aus der Genauigkeit */
+function eloDisplay(realRating, acc){
+  if(realRating) return {text: realRating+'', real:true};
+  if(acc!=null) return {text: roughElo(acc)+' (geschätzt)', real:false};
+  return {text:'–', real:false};
+}
 
 async function fetchLichessPgn(id){
   const r = await fetch(`https://lichess.org/game/export/${id}?literate=false`, {cache:'no-store', headers:{'Accept':'application/x-chess-pgn'}});
   if(!r.ok) throw new Error('lichess.org: Partie nicht gefunden (HTTP '+r.status+')');
   const pgn = await r.text();
   if(!pgn.includes('[White')) throw new Error('lichess.org: Partie enthält keine Zugdaten');
-  return {pgn, accuracies:null};
+  const weM = pgn.match(/\[WhiteElo "(\d+)"\]/), beM = pgn.match(/\[BlackElo "(\d+)"\]/);
+  const ratings = (weM||beM) ? {white: weM?+weM[1]:null, black: beM?+beM[1]:null} : null;
+  return {pgn, accuracies:null, ratings};
 }
 
 async function fetchJsonWithFallback(url){
@@ -540,7 +571,8 @@ async function fetchChesscomPgn(id, type, roundNr){
   const games = archive?.games || [];
   const entry = games.find(g => g.url && g.url.includes(id));
   if(!entry || !entry.pgn) throw new Error('chess.com: Partie im offiziellen Archiv von "'+username+'" nicht gefunden (evtl. privates Profil).');
-  return {pgn: entry.pgn, accuracies: entry.accuracies || null};
+  const ratings = (entry.white || entry.black) ? {white: entry.white?.rating||null, black: entry.black?.rating||null} : null;
+  return {pgn: entry.pgn, accuracies: entry.accuracies || null, ratings};
 }
 
 function buildEvalChartSvg(whiteWPs){
@@ -557,19 +589,83 @@ function buildEvalChartSvg(whiteWPs){
   </svg>`;
 }
 
-function renderAnalysisResult(body, whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl, fromCache){
+function classifyMove(loss, isBest){
+  if(isBest && loss<1) return {cls:'best', label:'Bester Zug'};
+  if(loss<2) return {cls:'excellent', label:'Sehr gut'};
+  if(loss<5) return {cls:'good', label:'Gut'};
+  if(loss<10) return {cls:'inacc', label:'Ungenauigkeit ?!'};
+  if(loss<20) return {cls:'mistake', label:'Fehler ?'};
+  return {cls:'blunder', label:'Patzer ??'};
+}
+function pieceUnicode(ch){
+  return {K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}[ch] || '';
+}
+function renderBoardHtml(fen){
+  const ranks = fen.split(' ')[0].split('/');
+  let html = '';
+  for(let r=0;r<8;r++){
+    let f=0;
+    for(const ch of ranks[r]){
+      if(/\d/.test(ch)){
+        for(let k=0;k<+ch;k++){ html += `<div class="sq ${(r+f)%2===0?'l':'d'}"></div>`; f++; }
+      } else {
+        html += `<div class="sq ${(r+f)%2===0?'l':'d'}">${pieceUnicode(ch)}</div>`; f++;
+      }
+    }
+  }
+  return `<div class="chessboard">${html}</div>`;
+}
+
+let currentAnalysis = null;
+
+function renderAnalysisResult(body, data, fromCache){
+  const {whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl, ratings} = data;
+  const eloW = eloDisplay(ratings?.white, accWhite);
+  const eloB = eloDisplay(ratings?.black, accBlack);
   body.innerHTML = `
     <div class="ana-chart">${buildEvalChartSvg(whiteWPs)}</div>
     <div class="ana-players">
-      <div class="p"><div class="u">⚪ ${esc(T[whiteTeam].name)}</div><div class="acc">${accWhite!=null?accWhite.toFixed(1)+'%':'–'}</div><div class="elo">Genauigkeit${accWhite!=null?' · Elo '+roughElo(accWhite):''}</div></div>
-      <div class="p"><div class="u">⚫ ${esc(T[blackTeam].name)}</div><div class="acc">${accBlack!=null?accBlack.toFixed(1)+'%':'–'}</div><div class="elo">Genauigkeit${accBlack!=null?' · Elo '+roughElo(accBlack):''}</div></div>
+      <div class="p"><div class="u">⚪ ${esc(T[whiteTeam].name)}</div><div class="acc">${accWhite!=null?accWhite.toFixed(1)+'%':'–'}</div><div class="elo">Genauigkeit${eloW.text!=='–'?' · '+(eloW.real?'Wertung ':'Elo ')+eloW.text:''}</div></div>
+      <div class="p"><div class="u">⚫ ${esc(T[blackTeam].name)}</div><div class="acc">${accBlack!=null?accBlack.toFixed(1)+'%':'–'}</div><div class="elo">Genauigkeit${eloB.text!=='–'?' · '+(eloB.real?'Wertung ':'Elo ')+eloB.text:''}</div></div>
     </div>
+    ${data.moves ? `<div class="btnrow"><button class="btn sec sm" onclick="openMoveReview()">📋 Ganze Partie ansehen (Zug für Zug)</button></div>` : ''}
     <div class="ana-note">
       ${fromCache ? '⚡ Aus Cache geladen — bereits einmal analysiert.' : (usedOfficial ? 'Genauigkeit von chess.com übernommen.' : `Schnellanalyse (Tiefe ${ANALYSIS_DEPTH}) mit Stockfish direkt im Browser berechnet.`)}
-      Elo-Werte sind grobe Schätzungen basierend auf der Genauigkeit, keine offizielle Bewertung.
+      ${(!eloW.real && !eloB.real) ? ' Elo-Werte ohne echte Wertungsdaten sind grobe Schätzungen aus der Genauigkeit, keine offizielle Bewertung.' : ''}
       <br><a href="${esc(gameUrl)}" target="_blank" rel="noopener">Partie extern ansehen ↗</a>
     </div>`;
 }
+
+function renderMoveReview(ply){
+  const d = currentAnalysis;
+  if(!d) return;
+  const body = document.getElementById('ana-body');
+  const fen = d.fens[ply];
+  const rows = d.moves.map((mv,i)=>`
+    <div class="mv-row ${i===ply-1?'active':''}" onclick="openMoveReview(${i+1})">
+      <span class="no">${Math.floor(i/2)+1}${i%2===0?'.':'…'}</span>
+      <span class="san">${esc(mv.san)}</span>
+      <span class="mv-badge ${mv.cls}">${mv.label}</span>
+    </div>`).join('');
+  body.innerHTML = `
+    ${renderBoardHtml(fen)}
+    <div class="rv-nav">
+      <button onclick="openMoveReview(${ply-1})" ${ply<=0?'disabled':''}>◀</button>
+      <span class="cur">${ply===0?'Startstellung':(d.moves[ply-1].whiteIsMover?'⚪':'⚫')+' '+esc(d.moves[ply-1].san)}</span>
+      <button onclick="openMoveReview(${ply+1})" ${ply>=d.moves.length?'disabled':''}>▶</button>
+    </div>
+    <div class="mv-list">${rows}</div>
+    <div class="btnrow"><button class="btn sec sm" onclick="backToSummary()">← Zurück zur Übersicht</button></div>
+  `;
+}
+window.openMoveReview = function(ply){
+  if(!currentAnalysis) return;
+  renderMoveReview(ply==null ? currentAnalysis.moves.length : ply);
+};
+window.backToSummary = function(){
+  if(!currentAnalysis) return;
+  renderAnalysisResult(document.getElementById('ana-body'), currentAnalysis, currentAnalysis.fromCache);
+};
 
 let anaToken = 0;
 async function openAnalysis(key){
@@ -602,14 +698,19 @@ async function openAnalysis(key){
       if(myToken !== anaToken) return;
       if(cacheSnap.exists()){
         const c = cacheSnap.data();
-        if(c.gameUrl === g.url && c.depth === ANALYSIS_DEPTH && Array.isArray(c.whiteWPs) && c.whiteWPs.length > 1){
-          renderAnalysisResult(body, whiteTeam, blackTeam, c.whiteWPs, c.accWhite, c.accBlack, c.usedOfficial, g.url, true);
+        if(c.gameUrl === g.url && c.depth === ANALYSIS_DEPTH && Array.isArray(c.whiteWPs) && c.whiteWPs.length > 1 && Array.isArray(c.fens)){
+          currentAnalysis = {
+            whiteTeam, blackTeam, whiteWPs: c.whiteWPs, accWhite: c.accWhite, accBlack: c.accBlack,
+            usedOfficial: c.usedOfficial, gameUrl: g.url, ratings: c.ratings||null,
+            fens: c.fens, moves: c.moves||null, fromCache: true
+          };
+          renderAnalysisResult(body, currentAnalysis, true);
           return;
         }
       }
     }catch(e){ /* Cache nicht lesbar -> normal neu berechnen */ }
 
-    const {pgn, accuracies} = info.source === 'lichess.org'
+    const {pgn, accuracies, ratings} = info.source === 'lichess.org'
       ? await fetchLichessPgn(info.id)
       : await fetchChesscomPgn(info.id, info.type, rn);
     if(myToken !== anaToken) return;
@@ -626,35 +727,53 @@ async function openAnalysis(key){
     await getEngine();
     if(myToken !== anaToken) return;
 
+    /* Stockfish kann eine Matt-/Patt-Stellung nicht bewerten (keine Legalzüge mehr) - Endstellung direkt auswerten */
+    const lastIsCheckmate = replay.isCheckmate();
+    const lastIsGameOver = replay.isGameOver();
+
     const whiteWPs = [];
+    const bestmoves = [];
     for(let i=0;i<fens.length;i++){
       if(myToken !== anaToken) return;
       const whiteToMove = i % 2 === 0;
-      const score = await evalFen(fens[i]);
-      whiteWPs.push(whiteWinPercent(score, whiteToMove));
+      if(i === fens.length-1 && lastIsGameOver){
+        whiteWPs.push(lastIsCheckmate ? (whiteToMove ? 0 : 100) : 50);
+        bestmoves.push(null);
+      } else {
+        const {score, bestmove} = await evalFen(fens[i]);
+        whiteWPs.push(whiteWinPercent(score, whiteToMove));
+        bestmoves.push(bestmove);
+      }
       const prog = document.getElementById('ana-prog');
       if(prog) prog.style.width = Math.round((i+1)/fens.length*100)+'%';
     }
     if(myToken !== anaToken) return;
 
     const accWhiteMoves = [], accBlackMoves = [];
+    const moves = [];
     for(let i=0;i<fens.length-1;i++){
       const whiteIsMover = i % 2 === 0;
       const before = moverWinPercent(whiteWPs[i], whiteIsMover);
       const after = moverWinPercent(whiteWPs[i+1], whiteIsMover);
-      const acc = accuracyFromLoss(before-after);
+      const loss = before-after;
+      const acc = accuracyFromLoss(loss);
       (whiteIsMover ? accWhiteMoves : accBlackMoves).push(acc);
+      const played = hist[i].from + hist[i].to + (hist[i].promotion||'');
+      const isBest = bestmoves[i] === played;
+      const {cls, label} = classifyMove(Math.max(0,loss), isBest);
+      moves.push({san: hist[i].san, whiteIsMover, cls, label});
     }
     const avg = arr => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
     const accWhite = accuracies?.white ?? avg(accWhiteMoves);
     const accBlack = accuracies?.black ?? avg(accBlackMoves);
     const usedOfficial = !!accuracies;
 
-    renderAnalysisResult(body, whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, g.url, false);
+    currentAnalysis = {whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl: g.url, ratings, fens, moves, fromCache: false};
+    renderAnalysisResult(body, currentAnalysis, false);
 
     /* Ergebnis für andere Besucher hochladen, damit niemand die gleiche Partie zweimal analysieren muss */
     setDoc(cacheRef, {
-      gameUrl: g.url, depth: ANALYSIS_DEPTH, whiteWPs, accWhite, accBlack, usedOfficial,
+      gameUrl: g.url, depth: ANALYSIS_DEPTH, whiteWPs, accWhite, accBlack, usedOfficial, ratings, fens, moves,
       computedAt: Date.now()
     }).catch(()=>{});
   }catch(e){
@@ -664,6 +783,7 @@ async function openAnalysis(key){
 }
 function closeAnalysis(){
   anaToken++;
+  currentAnalysis = null;
   document.getElementById('ana-overlay').classList.remove('on');
 }
 window.openAnalysis = openAnalysis;
