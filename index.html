@@ -94,10 +94,11 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 .ana-note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 .ana-err{padding:14px;background:#ffe8e8;color:#c00;border-radius:8px;font-size:13px;line-height:1.5}
 
-.chessboard{display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid var(--line)}
-.chessboard .sq{display:flex;align-items:center;justify-content:center;font-size:min(9vw,38px);line-height:1;aspect-ratio:1}
+.chessboard{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid var(--line)}
+.chessboard .sq{display:flex;align-items:center;justify-content:center;aspect-ratio:1;min-width:0;min-height:0}
 .chessboard .sq.l{background:#f0d9b5}
 .chessboard .sq.d{background:#b58863}
+.chessboard .sq img{width:82%;height:82%;object-fit:contain;pointer-events:none}
 .rv-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .rv-nav .cur{font-size:12.5px;color:var(--muted);text-align:center;flex:1}
 .rv-nav button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-weight:700;cursor:pointer}
@@ -109,6 +110,8 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 .mv-row .no{color:var(--muted);width:34px;flex:none;font-variant-numeric:tabular-nums}
 .mv-row .san{font-weight:700;flex:1}
 .mv-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
+.mv-badge.brilliant{color:#00838f;background:#e0f7fa}
+.mv-badge.book{color:#6a4fb0;background:#ede7f6}
 .mv-badge.best{color:#1565c0;background:#e3f2fd}
 .mv-badge.excellent{color:#00796b;background:#e0f2f1}
 .mv-badge.good{color:#2e7d32;background:#e8f5e9}
@@ -589,16 +592,38 @@ function buildEvalChartSvg(whiteWPs){
   </svg>`;
 }
 
-function classifyMove(loss, isBest){
+const PIECE_VALUE = {p:1,n:3,b:3,r:5,q:9,k:0};
+const BOOK_PLY_WINDOW = 10; /* erste 5 Vollzüge je Seite */
+
+function isSacrificeMove(fenAfter, toSquare, moverColor, pieceType){
+  const val = PIECE_VALUE[pieceType] || 0;
+  if(val < 3) return false;
+  try{
+    const board = new Chess(fenAfter);
+    const oppColor = moverColor === 'w' ? 'b' : 'w';
+    const attackers = board.attackers(toSquare, oppColor);
+    if(!attackers || attackers.length === 0) return false;
+    const minAttackerVal = Math.min(...attackers.map(sq => PIECE_VALUE[board.get(sq)?.type] ?? 9));
+    return minAttackerVal <= val;
+  }catch(e){ return false; }
+}
+
+function classifyMove(loss, isBest, plyIndex, opts){
+  opts = opts || {};
+  if(loss>=20) return {cls:'blunder', label:'Patzer ??'};
+  if(loss>=10) return {cls:'mistake', label:'Fehler ?'};
+  if(loss>=5)  return {cls:'inacc', label:'Ungenauigkeit ?!'};
+  const inBook = plyIndex < BOOK_PLY_WINDOW;
+  if(isBest && opts.isSacrifice && !inBook && opts.moverWinBefore>15 && opts.moverWinBefore<85 && opts.moverWinAfter>=55){
+    return {cls:'brilliant', label:'Brillant !!'};
+  }
+  if(inBook) return {cls:'book', label:'Theoriezug'};
   if(isBest && loss<1) return {cls:'best', label:'Bester Zug'};
   if(loss<2) return {cls:'excellent', label:'Sehr gut'};
-  if(loss<5) return {cls:'good', label:'Gut'};
-  if(loss<10) return {cls:'inacc', label:'Ungenauigkeit ?!'};
-  if(loss<20) return {cls:'mistake', label:'Fehler ?'};
-  return {cls:'blunder', label:'Patzer ??'};
+  return {cls:'good', label:'Gut'};
 }
-function pieceUnicode(ch){
-  return {K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}[ch] || '';
+function pieceFile(ch){
+  return ch === ch.toUpperCase() ? ch+'-white' : ch+'-black';
 }
 function renderBoardHtml(fen){
   const ranks = fen.split(' ')[0].split('/');
@@ -609,7 +634,7 @@ function renderBoardHtml(fen){
       if(/\d/.test(ch)){
         for(let k=0;k<+ch;k++){ html += `<div class="sq ${(r+f)%2===0?'l':'d'}"></div>`; f++; }
       } else {
-        html += `<div class="sq ${(r+f)%2===0?'l':'d'}">${pieceUnicode(ch)}</div>`; f++;
+        html += `<div class="sq ${(r+f)%2===0?'l':'d'}"><img src="./pieces/${pieceFile(ch)}.svg" alt="${ch}" draggable="false"></div>`; f++;
       }
     }
   }
@@ -760,7 +785,10 @@ async function openAnalysis(key){
       (whiteIsMover ? accWhiteMoves : accBlackMoves).push(acc);
       const played = hist[i].from + hist[i].to + (hist[i].promotion||'');
       const isBest = bestmoves[i] === played;
-      const {cls, label} = classifyMove(Math.max(0,loss), isBest);
+      const isSacrifice = isSacrificeMove(fens[i+1], hist[i].to, hist[i].color, hist[i].piece);
+      const {cls, label} = classifyMove(Math.max(0,loss), isBest, i, {
+        isSacrifice, moverWinBefore: before, moverWinAfter: after
+      });
       moves.push({san: hist[i].san, whiteIsMover, cls, label});
     }
     const avg = arr => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
