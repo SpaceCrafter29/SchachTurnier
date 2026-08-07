@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chess Olympics – Eröffnungen</title>
+<style>
+:root{ --bg:#f5f5f5; --panel:#fff; --line:#d0d0d0; --txt:#222; --muted:#666; --accent:#ff8c00; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}
+.note{font-size:12px;color:var(--muted);margin-bottom:14px}
+button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:14px}
+button:disabled{opacity:.5}
+#log{font-size:11.5px;color:var(--muted);margin:10px 0;white-space:pre-wrap;max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px;display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:14px}
+.team-hdr{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;margin-top:4px}
+th,td{border-bottom:1px solid var(--line);padding:6px 6px;font-size:13px;text-align:left}
+th{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
+.missing{color:var(--muted);font-style:italic;font-size:13px}
+.cnt{color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+
+<h1>♟️ Chess Olympics – Eröffnungen der Gegner</h1>
+<div class="note">Liest alle gemeldeten Partien aus und zeigt pro Team, welche Eröffnungen sie als Weiß bzw. Schwarz gespielt haben (Eröffnungsname direkt aus den chess.com/lichess Partie-Daten).</div>
+
+<button id="start">Eröffnungen laden</button>
+<div id="log"></div>
+<div id="out"></div>
+
+<script type="module">
+"use strict";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  projectId: "strategic-bus-gtgzl",
+  appId: "1:223160037293:web:05722321bf1f676a477b24",
+  apiKey: "AIzaSyAnnacfE_oBHBFAVytJfB2jjYyg883PpZ0",
+  authDomain: "strategic-bus-gtgzl.firebaseapp.com",
+  storageBucket: "strategic-bus-gtgzl.firebasestorage.app",
+  messagingSenderId: "223160037293"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+
+const TEAMS = [
+  {id:'nor', name:'Norwegen',        flag:'🇳🇴'},
+  {id:'prk', name:'Nordkorea',       flag:'🇰🇵'},
+  {id:'vat', name:'Vatikan',         flag:'🇻🇦'},
+  {id:'uzb', name:'Uzbekistan',      flag:'🇺🇿'},
+  {id:'ant', name:'Antigua',         flag:'🇦🇬'},
+  {id:'chn', name:'China',           flag:'🇨🇳'},
+  {id:'bar', name:'Barbuda',         flag:'🏝️'},
+  {id:'gat', name:'Gatzendimension', flag:'🌀'}
+];
+const T = Object.fromEntries(TEAMS.map(t=>[t.id,t]));
+
+const ROUNDS = [
+  {nr:1, date:'28.07.–30.07.', ms:[['nor','uzb'],['vat','bar'],['prk','chn'],['gat','ant']]},
+  {nr:2, date:'02.08.–04.08.', ms:[['uzb','ant'],['chn','gat'],['bar','prk'],['nor','vat']]},
+  {nr:3, date:'07.08.–09.08.', ms:[['vat','uzb'],['prk','nor'],['gat','bar'],['ant','chn']]},
+  {nr:4, date:'12.08.–14.08.', ms:[['uzb','chn'],['bar','ant'],['nor','gat'],['vat','prk']]},
+  {nr:5, date:'17.08.–19.08.', ms:[['prk','uzb'],['gat','vat'],['ant','nor'],['chn','bar']]},
+  {nr:6, date:'22.08.–24.08.', ms:[['vat','ant'],['nor','chn'],['uzb','bar'],['prk','gat']]},
+  {nr:7, date:'27.08.–29.08.', ms:[['gat','uzb'],['ant','prk'],['chn','vat'],['bar','nor']]}
+];
+const homeIsWhite = b => b===2;
+
+function extractGameInfo(u){
+  try{
+    const x=new URL(u);
+    if(x.hostname.includes('chess.com')){
+      const parts = x.pathname.split('/').filter(Boolean);
+      const gi = parts.indexOf('game');
+      if(gi >= 0){
+        const next = parts[gi+1];
+        if(/^\d+$/.test(next)) return {source:'chess.com', id:next};
+        if((next==='live'||next==='daily') && /^\d+$/.test(parts[gi+2])) return {source:'chess.com', id:parts[gi+2], type:next};
+      }
+      const li = parts.indexOf('live');
+      if(li >= 0 && parts[li+1]==='game' && /^\d+$/.test(parts[li+2])) return {source:'chess.com', id:parts[li+2], type:'live'};
+      const di = parts.indexOf('daily');
+      if(di >= 0 && parts[di+1]==='game' && /^\d+$/.test(parts[di+2])) return {source:'chess.com', id:parts[di+2], type:'daily'};
+    }
+    if(x.hostname.includes('lichess.org')){
+      const m = x.pathname.match(/^\/([a-zA-Z0-9]{8})(?:[a-zA-Z0-9]{4})?(?:\/|$)/);
+      if(m) return {source:'lichess.org', id:m[1]};
+    }
+    return null;
+  }catch(e){ return null; }
+}
+
+function niceOpeningFromEcoUrl(ecoUrl){
+  try{
+    const slug = ecoUrl.split('/').filter(Boolean).pop();
+    return slug.replace(/-/g, ' ').replace(/\.\.\./g, '… ').trim();
+  }catch(e){ return null; }
+}
+
+async function fetchJsonWithFallback(url){
+  const proxy = 'https://corsproxy.io/?';
+  try{
+    const r = await fetch(url, {cache:'no-store'});
+    if(r.ok) return await r.json();
+  }catch(e){}
+  const r2 = await fetch(proxy+encodeURIComponent(url), {cache:'no-store'});
+  if(!r2.ok) throw new Error('HTTP '+r2.status);
+  return await r2.json();
+}
+
+async function getOpeningLichess(id){
+  const r = await fetch(`https://lichess.org/game/export/${id}?literate=false`, {cache:'no-store', headers:{'Accept':'application/x-chess-pgn'}});
+  if(!r.ok) throw new Error('lichess HTTP '+r.status);
+  const pgn = await r.text();
+  const m = pgn.match(/\[Opening "([^"]+)"\]/);
+  if(m) return m[1];
+  const eco = pgn.match(/\[ECO "([^"]+)"\]/);
+  if(eco) return 'ECO '+eco[1];
+  throw new Error('keine Eröffnung im PGN');
+}
+
+async function getOpeningChesscom(id, type, roundNr){
+  const proxy = 'https://corsproxy.io/?';
+  let username = null;
+  for(const t of (type?[type]:['live','daily'])){
+    try{
+      const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${id}`);
+      const r = await fetch(proxy+target, {cache:'no-store'});
+      if(r.ok){
+        const data = await r.json();
+        if(data?.game?.pgnHeaders?.White){ username = data.game.pgnHeaders.White; break; }
+      }
+    }catch(e){}
+  }
+  if(!username) throw new Error('Spielerdaten nicht abrufbar');
+  const round = ROUNDS.find(x=>x.nr===roundNr);
+  const mMatch = round && round.date.match(/^(\d{2})\.(\d{2})\./);
+  const month = mMatch ? mMatch[2] : '08';
+  const archiveUrl = `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/2026/${month}`;
+  const archive = await fetchJsonWithFallback(archiveUrl);
+  const entry = (archive?.games||[]).find(g => g.url && g.url.includes(id));
+  if(!entry) throw new Error('Partie im Archiv nicht gefunden');
+  if(entry.eco) return niceOpeningFromEcoUrl(entry.eco);
+  if(entry.pgn){
+    const m = entry.pgn.match(/\[ECOUrl "([^"]+)"\]/) || entry.pgn.match(/\[Opening "([^"]+)"\]/);
+    if(m) return m[1].includes('http') ? niceOpeningFromEcoUrl(m[1]) : m[1];
+  }
+  throw new Error('keine Eröffnungsangabe gefunden');
+}
+
+function log(msg){
+  const el = document.getElementById('log');
+  el.style.display = 'block';
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+document.getElementById('start').addEventListener('click', run);
+
+async function run(){
+  const btn = document.getElementById('start');
+  btn.disabled = true;
+  document.getElementById('log').textContent = '';
+  document.getElementById('out').innerHTML = '';
+
+  log('Lade Turnierdaten…');
+  const snap = await getDoc(doc(db, "tournament", "state"));
+  if(!snap.exists()){ log('Keine Daten gefunden.'); btn.disabled=false; return; }
+  const games = snap.data().games || {};
+
+  const perTeam = {};
+  TEAMS.forEach(t => perTeam[t.id] = { white: [], black: [] });
+
+  const keys = Object.keys(games).filter(k => games[k]?.url && !games[k]?.dnf).sort();
+  log(`${keys.length} Partien mit Link gefunden.\n`);
+
+  for(const key of keys){
+    const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
+    if(!m) continue;
+    const [, rnr, mi, board] = m.map(Number);
+    const round = ROUNDS.find(r => r.nr === rnr);
+    if(!round) continue;
+    const pairing = round.ms[mi];
+    if(!pairing) continue;
+    const [home, away] = pairing;
+    const whiteTeam = homeIsWhite(board) ? home : away;
+    const blackTeam = homeIsWhite(board) ? away : home;
+
+    const url = games[key].url;
+    const info = extractGameInfo(url);
+    if(!info){ log(`⚠️ ${key}: ungültige URL`); continue; }
+
+    try{
+      const opening = info.source === 'lichess.org'
+        ? await getOpeningLichess(info.id)
+        : await getOpeningChesscom(info.id, info.type, rnr);
+      perTeam[whiteTeam].white.push({opening, key});
+      perTeam[blackTeam].black.push({opening, key});
+      log(`✅ ${key}: ${opening}`);
+    }catch(e){
+      log(`❌ ${key}: ${e.message}`);
+    }
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  log('\nFertig. Baue Übersicht…');
+
+  const out = document.getElementById('out');
+  TEAMS.forEach(t => {
+    const w = perTeam[t.id].white, b = perTeam[t.id].black;
+    if(w.length === 0 && b.length === 0) return;
+    const count = arr => {
+      const c = {};
+      arr.forEach(x => c[x.opening] = (c[x.opening]||0)+1);
+      return Object.entries(c).sort((a,b)=>b[1]-a[1]);
+    };
+    const wc = count(w), bc = count(b);
+    const rows = (label, list) => list.length
+      ? list.map(([op,n]) => `<tr><td>${label}</td><td>${op}</td><td class="cnt">${n}×</td></tr>`).join('')
+      : `<tr><td>${label}</td><td class="missing">keine Daten</td><td></td></tr>`;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="team-hdr">${t.flag} ${t.name}</div>
+      <table>
+        <thead><tr><th>Farbe</th><th>Eröffnung</th><th></th></tr></thead>
+        <tbody>${rows('Weiß', wc)}${rows('Schwarz', bc)}</tbody>
+      </table>`;
+    out.appendChild(card);
+  });
+
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
