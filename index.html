@@ -124,6 +124,14 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 .mv-badge.inacc{color:#b26a00;background:#fff4e5}
 .mv-badge.mistake{color:#e65100;background:#ffe0b2}
 .mv-badge.blunder{color:#c00;background:#ffe8e8}
+
+.sim-match{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0}
+.sim-match .vs{font-size:13px;font-weight:600;margin-bottom:6px}
+.sim-opts{display:flex;gap:6px}
+.sim-opts button{flex:1;padding:7px 4px;font-size:11.5px;border-radius:6px;border:1px solid var(--line);background:#fff;color:var(--txt);cursor:pointer;font-weight:600}
+.sim-opts button.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sim-locked{font-size:11px;color:var(--muted);text-align:center;padding:4px}
+tr.sim-q td{background:#fff4e0}
 </style>
 </head>
 <body>
@@ -136,6 +144,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
 <nav>
   <button data-tab="tabelle" class="on">Tabelle</button>
   <button data-tab="plan">Spielplan</button>
+  <button data-tab="sim">Simulator</button>
   <button data-tab="melden">Melden</button>
   <button data-tab="regeln">Regeln</button>
 </nav>
@@ -169,6 +178,11 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
     <div id="schedule"></div>
     <h2>Halbfinale &amp; Finale</h2>
     <div id="playoffs"></div>
+  </section>
+
+  <section id="tab-sim">
+    <h2>Was-wäre-wenn-Simulator</h2>
+    <div id="simulator"></div>
   </section>
 
   <section id="tab-melden">
@@ -893,14 +907,15 @@ window.openAnalysis = openAnalysis;
 window.closeAnalysis = closeAnalysis;
 
 /* ---------- Tabelle ---------- */
-function computeStandings(){
+function computeStandings(overrideGames){
+  const games = overrideGames || S.games;
   const st = {};
   TEAMS.forEach(t=>st[t.id]={id:t.id, sp:0, w:0, d:0, l:0, mp:0, bp:0, sb:0, matches:[]});
   ROUNDS.forEach(r=>r.ms.forEach((m,mi)=>{
     const [h,a] = m;
     let hb=0, ab=0, done=0;
     for(let b=1;b<=3;b++){
-      const g = S.games[gkey(r.nr,mi,b)];
+      const g = games[gkey(r.nr,mi,b)];
       const p = g && pts(g.res);
       if(p){ hb+=p[0]; ab+=p[1]; done++; }
     }
@@ -933,6 +948,80 @@ function renderStandings(){
     </tr>`).join('');
   document.getElementById('standings').innerHTML =
     `<thead><tr><th></th><th class="team">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>MP</th><th>BP</th><th>SB</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/* ---------- Simulator: Was-wäre-wenn für offene Round-Robin-Spiele ---------- */
+/* Vereinfachte Brettpunkte je Match-Ausgang (genau für MP, angenähert für BP/SB) */
+const SIM_OUTCOME = {
+  h: {1:'1', 2:'1', 3:'0'}, /* Sieg Team 1: 2:1 */
+  d: {1:'1', 2:'0', 3:'='}, /* Remis: 1,5:1,5 */
+  a: {1:'0', 2:'0', 3:'1'}  /* Sieg Team 2: 1:2 */
+};
+let simChoices = {}; /* 'r_m' -> 'h'|'d'|'a' */
+
+function buildSimGames(){
+  const merged = Object.assign({}, S.games);
+  Object.entries(simChoices).forEach(([key, choice])=>{
+    const [rn, mi] = key.split('_').map(Number);
+    for(let b=1;b<=3;b++){
+      const k = gkey(rn, mi, b);
+      if(!S.games[k]) merged[k] = {res: SIM_OUTCOME[choice][b], url:'', dnf:false};
+    }
+  });
+  return merged;
+}
+function setSimMatch(rn, mi, choice){
+  const key = rn+'_'+mi;
+  simChoices[key] = (simChoices[key]===choice) ? undefined : choice;
+  if(simChoices[key]===undefined) delete simChoices[key];
+  renderSimulator();
+}
+function resetSimulator(){ simChoices = {}; renderSimulator(); }
+window.setSimMatch = setSimMatch;
+window.resetSimulator = resetSimulator;
+
+function renderSimulator(){
+  const el = document.getElementById('simulator');
+  if(!el) return;
+  let html = `<div class="card note">
+    Setze für noch offene Spiele probeweise ein Ergebnis, um zu sehen, wer damit ins Halbfinale (Top&nbsp;4) käme.
+    Vereinfacht: Sieg&nbsp;=&nbsp;2:1, Remis&nbsp;=&nbsp;1,5:1,5 Brettpunkte — die Mannschaftspunkte stimmen exakt, BP/SB sind angenähert.
+    Bereits gemeldete Ergebnisse sind fix und nicht änderbar.
+    <div class="btnrow"><button class="btn sec sm" onclick="resetSimulator()">Simulation zurücksetzen</button></div>
+  </div>`;
+
+  ROUNDS.forEach(r=>{
+    html += `<div class="tierhdr">${r.nr}. Runde (${r.date})</div>`;
+    r.ms.forEach((m,mi)=>{
+      const [h,a] = m;
+      const locked = [1,2,3].every(b=>S.games[gkey(r.nr,mi,b)]);
+      const cur = simChoices[r.nr+'_'+mi];
+      html += `<div class="sim-match">
+        <div class="vs">${T[h].flag} ${esc(T[h].name)} <span style="color:var(--muted)">vs</span> ${esc(T[a].name)} ${T[a].flag}</div>
+        ${locked ? `<div class="sim-locked">bereits gemeldet</div>` : `<div class="sim-opts">
+          <button class="${cur==='h'?'sel':''}" onclick="setSimMatch(${r.nr},${mi},'h')">Sieg ${esc(T[h].name)}</button>
+          <button class="${cur==='d'?'sel':''}" onclick="setSimMatch(${r.nr},${mi},'d')">Remis</button>
+          <button class="${cur==='a'?'sel':''}" onclick="setSimMatch(${r.nr},${mi},'a')">Sieg ${esc(T[a].name)}</button>
+        </div>`}
+      </div>`;
+    });
+  });
+
+  const standings = computeStandings(buildSimGames());
+  html += `<h2 style="margin-top:20px">Tabelle mit Simulation</h2>
+    <div class="card">
+      <div class="scroll"><table>
+        <thead><tr><th></th><th class="team">Team</th><th>MP</th><th>BP</th><th>SB</th><th></th></tr></thead>
+        <tbody>${standings.map((s,i)=>`<tr class="${i<4?'sim-q':''}">
+          <td class="rank">${i+1}</td>
+          <td class="team">${T[s.id].flag} ${esc(T[s.id].name)}</td>
+          <td class="mp">${s.mp}</td><td>${fmt(s.bp)}</td><td>${s.sb}</td>
+          <td>${i<4?'<span class="pill ok">Halbfinale</span>':''}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+
+  el.innerHTML = html;
 }
 
 function renderIndividual(){
@@ -1375,7 +1464,7 @@ async function submitResult(){
 
 
 /* ---------- Render / Events ---------- */
-function renderAll(){ renderStandings(); renderIndividual(); renderSchedule(); renderPlayoffs(); }
+function renderAll(){ renderStandings(); renderIndividual(); renderSchedule(); renderPlayoffs(); renderSimulator(); }
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
