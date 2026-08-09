@@ -167,9 +167,8 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       </div>
     </div>
     <div id="schedule"></div>
-    <div class="card note">
-      Mögliche Tiebreaks: 30.08.–31.08. (unwahrscheinlich, dass es passiert) &middot; <b>Finale: 01.09.</b>
-    </div>
+    <h2>Halbfinale &amp; Finale</h2>
+    <div id="playoffs"></div>
   </section>
 
   <section id="tab-melden">
@@ -178,7 +177,17 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
       <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com oder lichess.org geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung.</div>
       <label>Runde</label><select id="f-round"></select>
       <label>Begegnung</label><select id="f-match"></select>
+      <div id="f-leg-wrap" style="display:none">
+        <label>Etappe</label><select id="f-leg"></select>
+      </div>
       <label>Brett</label><select id="f-board"></select>
+      <div id="f-armcolor-wrap" style="display:none">
+        <label>Farbe (Armageddon)</label>
+        <select id="f-armcolor">
+          <option value="p0">Zuerst genanntes Team spielt Weiß</option>
+          <option value="p1">Zweites Team spielt Weiß</option>
+        </select>
+      </div>
       <label>Ergebnis</label><select id="f-res"></select>
       <label>Partie-Status</label>
       <select id="f-type" onchange="document.getElementById('url-wrap').style.display=this.value==='dnf'?'none':'block'">
@@ -226,16 +235,33 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
         <br><br>
         Alle <b>Bretter eines Matches spielen gleichzeitig</b>. Es spielen immer 2 Nationen gegeneinander.
         <br><br>
-        Die <b>Top 2 nach Round-Robin</b> qualifizieren sich für das Finale.
+        Die <b>Top 4 nach Round-Robin</b> qualifizieren sich für das Halbfinale: <b>1. gegen 4.</b>, <b>2. gegen 3.</b>
       </div>
     </div>
 
     <div class="card">
-      <div class="tierhdr">3. Finale</div>
+      <div class="tierhdr">3. Halbfinale</div>
       <div class="note" style="font-size:14px;line-height:1.6">
-        Im Finale gibt es <b>2 Matches</b>, sodass jeder einmal Weiß und einmal Schwarz hat.
+        Wie im Finale gibt es <b>Hin- und Rückspiel</b>, sodass jeder einmal Weiß und einmal Schwarz hat.
         <br><br>
-        Steht es danach <b>2:2 in Mannschaftspunkten</b>, wird ein <b>Armageddon zwischen Brett 1</b> ausgetragen.
+        Steht es danach <b>2:2 in Mannschaftspunkten</b>, entscheidet eine Tiebreak-Kette — jede Stufe nur bei Unentschieden:
+        <ol style="margin:4px 0 0 20px">
+          <li>Blitz-Match <b>5+0</b></li>
+          <li>Blitz-Match <b>3+2</b></li>
+          <li>Blitz-Match <b>3+0</b></li>
+          <li><b>Armageddon</b> auf Brett 1 (letzte Instanz)</li>
+        </ol>
+        <br>
+        Die beiden Sieger ziehen ins <b>Finale</b> ein.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tierhdr">4. Finale</div>
+      <div class="note" style="font-size:14px;line-height:1.6">
+        Auch im Finale gibt es <b>Hin- und Rückspiel</b>, sodass jeder einmal Weiß und einmal Schwarz hat.
+        <br><br>
+        Steht es danach <b>2:2 in Mannschaftspunkten</b>, wird direkt ein <b>Armageddon zwischen Brett 1</b> ausgetragen (keine Blitz-Kette davor, anders als im Halbfinale).
         <br><br>
         Der Sieger des Finals ist der <b>🏆 Sieger der Chess Olympics!</b>
       </div>
@@ -307,6 +333,15 @@ const ROUNDS = [
   {nr:6, date:'22.08.–24.08.', ms:[['vat','ant'],['nor','chn'],['uzb','bar'],['prk','gat']]},
   {nr:7, date:'27.08.–29.08.', ms:[['gat','uzb'],['ant','prk'],['chn','vat'],['bar','nor']]}
 ];
+
+/* Top 4 nach Round-Robin: Halbfinale (1. vs 4., 2. vs 3.), dann Finale.
+   Beide K.o.-Runden: Hin- und Rückspiel (jeder einmal Weiß/Schwarz).
+   Tiebreak bei 2:2 MP nach beiden Spielen — Halbfinale hat eine Blitz-Kette davor, Finale geht direkt ins Armageddon. */
+const PLAYOFF_STAGES = [
+  {id:'SF', name:'Halbfinale', date:'1. September', tiebreak:['5+0','3+2','3+0']},
+  {id:'F',  name:'Finale',     date:'Termin nach den Halbfinals', tiebreak:[]}
+];
+const PLAYOFF_STAGE = Object.fromEntries(PLAYOFF_STAGES.map(s=>[s.id,s]));
 
 const KEY = 'schachturnier_v1';
 
@@ -929,6 +964,90 @@ function renderIndividual(){
   document.getElementById('individual').innerHTML = html;
 }
 
+/* ---------- Halbfinale / Finale (K.o.-Runden) ---------- */
+const pkey   = (stage,m,leg,b) => stage+'M'+m+'L'+leg+'B'+b;
+const tbkey  = (stage,m,tb,b)  => stage+'M'+m+'TB'+tb+'B'+b;
+const armkey = (stage,m)       => stage+'M'+m+'ARM';
+
+function roundRobinComplete(){
+  return ROUNDS.every(r=>r.ms.every((m,mi)=>[1,2,3].every(b=>{
+    const g = S.games[gkey(r.nr,mi,b)];
+    return g && pts(g.res);
+  })));
+}
+function getQualifiers(){
+  return roundRobinComplete() ? computeStandings().slice(0,4) : null;
+}
+function semifinalPairing(){
+  const q = getQualifiers();
+  if(!q) return null;
+  return [ {p0:q[0].id, p1:q[3].id}, {p0:q[1].id, p1:q[2].id} ];
+}
+function finalPairing(){
+  const semi = semifinalPairing();
+  if(!semi) return null;
+  const r0 = resolvePlayoffMatch('SF', 0, semi[0].p0, semi[0].p1);
+  const r1 = resolvePlayoffMatch('SF', 1, semi[1].p0, semi[1].p1);
+  if(!r0.winner || !r1.winner) return null;
+  return [{ p0: r0.winner==='p0'?semi[0].p0:semi[0].p1, p1: r1.winner==='p0'?semi[1].p0:semi[1].p1 }];
+}
+
+/* Hinspiel: wie Round-Robin "Heim" (Brett 1+3 Schwarz, Brett 2 Weiß). Rückspiel: Farben komplett getauscht. */
+function playoffP0White(leg, b){ return leg===1 ? homeIsWhite(b) : !homeIsWhite(b); }
+
+function computeLeg(stageId, m, leg){
+  let p0pts=0, p1pts=0, done=0;
+  for(let b=1;b<=3;b++){
+    const g = S.games[pkey(stageId,m,leg,b)];
+    const p = g && pts(g.res);
+    if(p){ p0pts+=p[0]; p1pts+=p[1]; done++; }
+  }
+  return {leg, p0pts, p1pts, done};
+}
+function computeTiebreakStage(stageId, m, tbIdx){
+  let p0pts=0, p1pts=0, done=0;
+  for(let b=1;b<=3;b++){
+    const g = S.games[tbkey(stageId,m,tbIdx,b)];
+    const p = g && pts(g.res);
+    if(p){ p0pts+=p[0]; p1pts+=p[1]; done++; }
+  }
+  let winner=null;
+  if(done===3){ if(p0pts>p1pts) winner='p0'; else if(p0pts<p1pts) winner='p1'; }
+  return {p0pts, p1pts, done, winner};
+}
+function computeArmageddon(stageId, m){
+  const g = S.games[armkey(stageId,m)];
+  if(!g) return {done:false};
+  /* Weiß muss gewinnen, bei Remis gewinnt Schwarz */
+  const whiteWins = g.res==='1';
+  const winner = whiteWins ? (g.whiteIsP0?'p0':'p1') : (g.whiteIsP0?'p1':'p0');
+  return {done:true, winner, whiteIsP0:g.whiteIsP0};
+}
+function resolvePlayoffMatch(stageId, m, p0, p1){
+  const legs = [1,2].map(leg=>computeLeg(stageId,m,leg));
+  const legsComplete = legs.every(l=>l.done===3);
+  const bpP0 = legs.reduce((s,l)=>s+l.p0pts,0), bpP1 = legs.reduce((s,l)=>s+l.p1pts,0);
+  let mpP0=0, mpP1=0;
+  legs.forEach(l=>{
+    if(l.done!==3) return;
+    if(l.p0pts>l.p1pts) mpP0+=2; else if(l.p0pts<l.p1pts) mpP1+=2; else { mpP0+=1; mpP1+=1; }
+  });
+  const base = {legs, legsComplete, bpP0, bpP1, mpP0, mpP1};
+  if(!legsComplete) return {...base, winner:null};
+  if(mpP0!==mpP1) return {...base, winner: mpP0>mpP1?'p0':'p1'};
+
+  const stageDef = PLAYOFF_STAGE[stageId];
+  const tbResults = [];
+  for(let i=0;i<stageDef.tiebreak.length;i++){
+    const r = computeTiebreakStage(stageId, m, i);
+    tbResults.push(r);
+    if(r.winner) return {...base, winner:r.winner, tbResults};
+    if(r.done!==3) return {...base, winner:null, tbResults};
+  }
+  const arm = computeArmageddon(stageId, m);
+  return {...base, winner: arm.winner||null, tbResults, arm};
+}
+
 /* ---------- Spielplan ---------- */
 function boardHtml(r, mi, m, b){
   const [h,a] = m;
@@ -992,46 +1111,202 @@ function renderSchedule(){
   document.getElementById('schedule').innerHTML = html;
 }
 
+/* ---------- Halbfinale/Finale Anzeige ---------- */
+function playoffBoardHtml(stageId, m, leg, p0, p1, b){
+  const k = pkey(stageId, m, leg, b);
+  const g = S.games[k];
+  const p = g && pts(g.res);
+  const p0White = playoffP0White(leg, b);
+  const line = (teamId, isP0, val) => `
+    <div class="row">
+      <span class="dot ${(isP0 ? p0White : !p0White) ? 'w':'b'}"></span>
+      <span class="nm">${T[teamId].flag} ${esc(playerName(teamId,b))}</span>
+      <span class="pt">${val}</span>
+    </div>`;
+  const body = line(p0,true, p?fmt(p[0]):'–') + line(p1,false, p?fmt(p[1]):'–');
+  let sub;
+  if(g){
+    sub = `<div class="sub">
+      <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
+      ${g.dnf ? '🚫 Kampflos' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a> · <button class="ana-link" onclick="openAnalysis('${k}')">🔍 Analyse</button>` : '')}
+      ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
+    </div>`;
+  } else {
+    sub = `<div class="sub open">noch kein Ergebnis</div>`;
+  }
+  return `<div class="board"><div class="bl">Brett ${b} · ${TIER[b]}</div>${body}${sub}</div>`;
+}
+function tbBoardHtml(stageId, m, tbIdx, p0, p1, b){
+  const k = tbkey(stageId, m, tbIdx, b);
+  const g = S.games[k];
+  const p = g && pts(g.res);
+  const p0White = homeIsWhite(b);
+  const line = (teamId, isP0, val) => `
+    <div class="row">
+      <span class="dot ${(isP0 ? p0White : !p0White) ? 'w':'b'}"></span>
+      <span class="nm">${T[teamId].flag} ${esc(playerName(teamId,b))}</span>
+      <span class="pt">${val}</span>
+    </div>`;
+  const body = line(p0,true, p?fmt(p[0]):'–') + line(p1,false, p?fmt(p[1]):'–');
+  const sub = g
+    ? `<div class="sub"><span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>${g.url && validUrl(g.url) ? ` <a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : ''}</div>`
+    : `<div class="sub open">noch kein Ergebnis</div>`;
+  return `<div class="board"><div class="bl">Brett ${b}</div>${body}${sub}</div>`;
+}
+function armBoardHtml(stageId, m, p0, p1){
+  const k = armkey(stageId, m);
+  const g = S.games[k];
+  if(!g) return `<div class="board"><div class="sub open">noch kein Ergebnis</div></div>`;
+  const whiteTeam = g.whiteIsP0 ? p0 : p1, blackTeam = g.whiteIsP0 ? p1 : p0;
+  const winner = g.res==='1' ? whiteTeam : blackTeam;
+  return `<div class="board">
+    <div class="row"><span class="dot w"></span><span class="nm">${T[whiteTeam].flag} ${esc(T[whiteTeam].name)}</span></div>
+    <div class="row"><span class="dot b"></span><span class="nm">${T[blackTeam].flag} ${esc(T[blackTeam].name)}</span></div>
+    <div class="sub">
+      <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
+      ${g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : ''}
+      <b>${T[winner].flag} ${esc(T[winner].name)} gewinnt</b>
+    </div>
+  </div>`;
+}
+function playoffMatchCard(stageId, m, p0, p1){
+  const result = resolvePlayoffMatch(stageId, m, p0, p1);
+  const stageDef = PLAYOFF_STAGE[stageId];
+  let html = `<div class="match">
+    <div class="head">
+      <span>${T[p0].flag} ${esc(T[p0].name)} <span style="color:var(--muted)">vs</span> ${esc(T[p1].name)} ${T[p1].flag}</span>
+      <span class="agg">${fmt(result.bpP0)} : ${fmt(result.bpP1)} <span style="font-size:11px;color:var(--muted)">(${result.mpP0}:${result.mpP1} MP)</span></span>
+    </div>`;
+  result.legs.forEach(l=>{
+    html += `<div class="tierhdr" style="margin:8px 10px 2px">${l.leg===1?'Hinspiel':'Rückspiel'}</div>`;
+    for(let b=1;b<=3;b++) html += playoffBoardHtml(stageId, m, l.leg, p0, p1, b);
+  });
+  if(result.legsComplete && result.mpP0===result.mpP1){
+    (result.tbResults||[]).forEach((tb,i)=>{
+      html += `<div class="tierhdr" style="margin:8px 10px 2px">Tiebreak ${esc(stageDef.tiebreak[i])}</div>`;
+      for(let b=1;b<=3;b++) html += tbBoardHtml(stageId, m, i, p0, p1, b);
+    });
+    const allTbDrawn = stageDef.tiebreak.length===0 || (result.tbResults.length===stageDef.tiebreak.length && result.tbResults.every(t=>t.done===3 && !t.winner));
+    if(allTbDrawn){
+      html += `<div class="tierhdr" style="margin:8px 10px 2px">Armageddon (Brett 1)</div>${armBoardHtml(stageId, m, p0, p1)}`;
+    }
+  }
+  if(result.winner){
+    const w = result.winner==='p0'?p0:p1;
+    html += `<div class="sub" style="padding:8px 10px;font-weight:700">🏆 ${T[w].flag} ${esc(T[w].name)} zieht weiter</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function renderPlayoffs(){
+  const el = document.getElementById('playoffs');
+  if(!el) return;
+  const semi = semifinalPairing();
+  let html = '';
+  if(!semi){
+    html = `<div class="rd"><b>Halbfinale</b><span>${esc(PLAYOFF_STAGE.SF.date)}</span></div>
+      <div class="card note">Die Halbfinal-Paarungen stehen erst nach Abschluss aller 7 Runden fest (Top&nbsp;4 der Tabelle: 1.&nbsp;gegen&nbsp;4., 2.&nbsp;gegen&nbsp;3., Hin- und Rückspiel).</div>`;
+  } else {
+    html += `<div class="rd"><b>Halbfinale</b><span>${esc(PLAYOFF_STAGE.SF.date)}</span></div>`;
+    semi.forEach((p,i)=> html += playoffMatchCard('SF', i, p.p0, p.p1));
+    const fin = finalPairing();
+    html += `<div class="rd"><b>Finale</b><span>${esc(PLAYOFF_STAGE.F.date)}</span></div>`;
+    html += !fin
+      ? `<div class="card note">Die Finalpaarung steht erst fest, wenn beide Halbfinals entschieden sind.</div>`
+      : playoffMatchCard('F', 0, fin[0].p0, fin[0].p1);
+  }
+  el.innerHTML = html;
+}
+
 /* ---------- Meldeformular ---------- */
+const isPlayoffRound = rv => rv==='SF' || rv==='F';
+const LEG_LABELS = {'1':'Hinspiel','2':'Rückspiel','tb0':'Tiebreak 5+0','tb1':'Tiebreak 3+2','tb2':'Tiebreak 3+0','arm':'Armageddon (Brett 1)'};
+
 function fillRounds(){
   const currentRound = getCurrentRound();
   document.getElementById('f-round').innerHTML =
-    ROUNDS.map(r=>`<option value="${r.nr}">${r.nr}. Runde (${r.date})</option>`).join('');
+    ROUNDS.map(r=>`<option value="${r.nr}">${r.nr}. Runde (${r.date})</option>`).join('') +
+    `<option value="SF">Halbfinale</option><option value="F">Finale</option>`;
   document.getElementById('f-round').value = currentRound;
 }
 function fillMatches(){
-  const rn = +document.getElementById('f-round').value;
-  const r = ROUNDS.find(x=>x.nr===rn);
-  document.getElementById('f-match').innerHTML =
-    r.ms.map((m,i)=>`<option value="${i}">${T[m[0]].name} vs ${T[m[1]].name}</option>`).join('');
+  const rv = document.getElementById('f-round').value;
+  const sel = document.getElementById('f-match');
+  document.getElementById('f-leg-wrap').style.display = isPlayoffRound(rv) ? 'block' : 'none';
+  if(isPlayoffRound(rv)){
+    const pairing = rv==='SF' ? semifinalPairing() : finalPairing();
+    sel.innerHTML = pairing
+      ? pairing.map((p,i)=>`<option value="${i}">${esc(T[p.p0].name)} vs ${esc(T[p.p1].name)}</option>`).join('')
+      : `<option value="">– Paarung steht noch nicht fest –</option>`;
+  } else {
+    const r = ROUNDS.find(x=>x.nr===+rv);
+    sel.innerHTML = r.ms.map((m,i)=>`<option value="${i}">${esc(T[m[0]].name)} vs ${esc(T[m[1]].name)}</option>`).join('');
+  }
+  fillLeg();
+}
+function fillLeg(){
+  const rv = document.getElementById('f-round').value;
+  if(isPlayoffRound(rv)){
+    const stageDef = PLAYOFF_STAGE[rv];
+    const opts = ['1','2', ...stageDef.tiebreak.map((_,i)=>'tb'+i), 'arm'];
+    document.getElementById('f-leg').innerHTML = opts.map(v=>`<option value="${v}">${LEG_LABELS[v]}</option>`).join('');
+  }
   fillBoards();
 }
+function currentPlayoffPairing(rv){
+  return rv==='SF' ? semifinalPairing() : finalPairing();
+}
 function fillBoards(){
-  const rn = +document.getElementById('f-round').value;
-  const mi = +document.getElementById('f-match').value;
-  const m = ROUNDS.find(x=>x.nr===rn).ms[mi];
-  document.getElementById('f-board').innerHTML = [1,2,3].map(b=>{
-    const hw = homeIsWhite(b);
-    return `<option value="${b}">Brett ${b} · ${TIER[b]} — ${T[m[0]].name} ${hw?'(weiß)':'(schwarz)'} vs ${T[m[1]].name} ${hw?'(schwarz)':'(weiß)'}</option>`;
-  }).join('');
+  const rv = document.getElementById('f-round').value;
+  const sel = document.getElementById('f-board');
+  const armWrap = document.getElementById('f-armcolor-wrap');
+  if(isPlayoffRound(rv)){
+    const leg = document.getElementById('f-leg').value;
+    if(leg==='arm'){
+      sel.innerHTML = `<option value="1">Brett 1</option>`;
+      armWrap.style.display = 'block';
+    } else {
+      armWrap.style.display = 'none';
+      const legNum = (leg==='1'||leg==='2') ? +leg : null;
+      sel.innerHTML = [1,2,3].map(b=>{
+        const white = legNum ? playoffP0White(legNum,b) : homeIsWhite(b);
+        return `<option value="${b}">Brett ${b}${legNum?' · '+TIER[b]:''} — ${white?'Team 1 weiß':'Team 1 schwarz'}</option>`;
+      }).join('');
+    }
+  } else {
+    armWrap.style.display = 'none';
+    const mi = +document.getElementById('f-match').value;
+    const m = ROUNDS.find(x=>x.nr===+rv).ms[mi];
+    sel.innerHTML = [1,2,3].map(b=>{
+      const hw = homeIsWhite(b);
+      return `<option value="${b}">Brett ${b} · ${TIER[b]} — ${T[m[0]].name} ${hw?'(weiß)':'(schwarz)'} vs ${T[m[1]].name} ${hw?'(schwarz)':'(weiß)'}</option>`;
+    }).join('');
+  }
   fillRes();
 }
 function fillRes(){
-  const rn = +document.getElementById('f-round').value;
-  const mi = +document.getElementById('f-match').value;
-  const m = ROUNDS.find(x=>x.nr===rn).ms[mi];
-  document.getElementById('f-res').innerHTML =
-    `<option value="">– bitte wählen –</option>
-     <option value="1">Sieg ${esc(T[m[0]].name)}</option>
+  const rv = document.getElementById('f-round').value;
+  const sel = document.getElementById('f-res');
+  let n0, n1;
+  if(isPlayoffRound(rv)){
+    const mi = +document.getElementById('f-match').value;
+    const pairing = currentPlayoffPairing(rv);
+    if(!pairing || isNaN(mi) || !pairing[mi]){ sel.innerHTML = `<option value="">– Begegnung steht noch nicht fest –</option>`; return; }
+    n0 = T[pairing[mi].p0].name; n1 = T[pairing[mi].p1].name;
+  } else {
+    const mi = +document.getElementById('f-match').value;
+    const m = ROUNDS.find(x=>x.nr===+rv).ms[mi];
+    n0 = T[m[0]].name; n1 = T[m[1]].name;
+  }
+  sel.innerHTML = `<option value="">– bitte wählen –</option>
+     <option value="1">Sieg ${esc(n0)}</option>
      <option value="=">Remis</option>
-     <option value="0">Sieg ${esc(T[m[1]].name)}</option>`;
+     <option value="0">Sieg ${esc(n1)}</option>`;
 }
 async function submitResult(){
   const box = document.getElementById('f-msg');
   const btn = document.getElementById('f-send');
-  const rn = +document.getElementById('f-round').value;
-  const mi = +document.getElementById('f-match').value;
-  const b  = +document.getElementById('f-board').value;
+  const rv = document.getElementById('f-round').value;
   const res = document.getElementById('f-res').value;
   const type = document.getElementById('f-type').value;
   const url = document.getElementById('f-url').value.trim();
@@ -1042,7 +1317,40 @@ async function submitResult(){
   if(type !== 'dnf' && !url) return err('Bitte einen chess.com oder lichess.org Link angeben.');
   if(type !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — akzeptiert: chess.com/live/game/[ID] oder lichess.org/[ID]');
 
-  const k = gkey(rn,mi,b);
+  let k, extra = {};
+  if(isPlayoffRound(rv)){
+    const mi = +document.getElementById('f-match').value;
+    const pairing = currentPlayoffPairing(rv);
+    if(!pairing || isNaN(mi) || !pairing[mi]) return err('Diese Begegnung steht noch nicht fest.');
+    const {p0, p1} = pairing[mi];
+    const leg = document.getElementById('f-leg').value;
+    const b = +document.getElementById('f-board').value;
+
+    if(leg==='1' || leg==='2'){
+      k = pkey(rv, mi, +leg, b);
+    } else if(leg.startsWith('tb')){
+      const tbIdx = +leg.slice(2);
+      const st = resolvePlayoffMatch(rv, mi, p0, p1);
+      if(!st.legsComplete) return err('Hin- und Rückspiel müssen erst abgeschlossen sein.');
+      if(st.mpP0 !== st.mpP1) return err('Kein Tiebreak nötig — die Begegnung ist bereits entschieden.');
+      if(tbIdx > 0){
+        const prev = st.tbResults && st.tbResults[tbIdx-1];
+        if(!prev || prev.done !== 3 || prev.winner) return err('Die vorherige Tiebreak-Stufe muss erst unentschieden enden.');
+      }
+      k = tbkey(rv, mi, tbIdx, b);
+    } else {
+      const st = resolvePlayoffMatch(rv, mi, p0, p1);
+      const stageDef = PLAYOFF_STAGE[rv];
+      const tbDone = stageDef.tiebreak.length===0 || (st.tbResults && st.tbResults.length===stageDef.tiebreak.length && st.tbResults.every(t=>t.done===3 && !t.winner));
+      if(!st.legsComplete || st.mpP0 !== st.mpP1 || !tbDone) return err('Armageddon ist erst fällig, wenn alle vorherigen Etappen unentschieden ausgingen.');
+      k = armkey(rv, mi);
+      extra.whiteIsP0 = document.getElementById('f-armcolor').value === 'p0';
+    }
+  } else {
+    const rn = +rv, mi = +document.getElementById('f-match').value, b = +document.getElementById('f-board').value;
+    k = gkey(rn,mi,b);
+  }
+
   const existing = S.games[k];
   if(existing && !confirm('Ergebnis existiert bereits. Überschreiben?')) return;
 
@@ -1055,7 +1363,7 @@ async function submitResult(){
     if(check.msg) info('⚠️ '+check.msg);
   }
 
-  S.games[k] = {res, url: type==='dnf'?'':url, dnf: type==='dnf'};
+  S.games[k] = {res, url: type==='dnf'?'':url, dnf: type==='dnf', ...extra};
   updateGameInFirebase(k, S.games[k]);
   renderAll();
   box.innerHTML = `<div class="msg good">✅ Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
@@ -1067,7 +1375,7 @@ async function submitResult(){
 
 
 /* ---------- Render / Events ---------- */
-function renderAll(){ renderStandings(); renderIndividual(); renderSchedule(); }
+function renderAll(){ renderStandings(); renderIndividual(); renderSchedule(); renderPlayoffs(); }
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
@@ -1076,7 +1384,8 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 });
 
 document.getElementById('f-round').onchange = fillMatches;
-document.getElementById('f-match').onchange = fillBoards;
+document.getElementById('f-match').onchange = fillLeg;
+document.getElementById('f-leg').onchange = fillBoards;
 document.getElementById('f-board').onchange = fillRes;
 document.getElementById('f-send').onclick = submitResult;
 
