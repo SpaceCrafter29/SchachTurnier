@@ -188,7 +188,7 @@ tr.sim-q td{background:#fff4e0}
   <section id="tab-melden">
     <h2>Ergebnis melden</h2>
     <div class="card">
-      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com oder lichess.org geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung.</div>
+      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com oder lichess.org geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung. <b>Kampfloses Remis</b> (Ergebnis "Remis" bei "Gegner nicht erschienen") gibt <b>0:0 Brettpunkte</b> für beide Seiten.</div>
       <label>Runde</label><select id="f-round"></select>
       <label>Begegnung</label><select id="f-match"></select>
       <div id="f-leg-wrap" style="display:none">
@@ -459,6 +459,12 @@ function fmt(p){
   return String(i);
 }
 function pts(res){ return res==='1'?[1,0] : res==='='?[0.5,0.5] : res==='0'?[0,1] : res==='dnf'?[1,0] : null; }
+/* Kampfloses Remis (dnf + Remis gemeldet): 0:0 Brettpunkte für beide statt normaler 0,5:0,5 */
+function gamePts(g){
+  if(!g) return null;
+  if(g.dnf && g.res==='=') return [0,0];
+  return pts(g.res);
+}
 function extractGameId(u){
   try{
     const x=new URL(u);
@@ -916,7 +922,7 @@ function computeStandings(overrideGames){
     let hb=0, ab=0, done=0;
     for(let b=1;b<=3;b++){
       const g = games[gkey(r.nr,mi,b)];
-      const p = g && pts(g.res);
+      const p = gamePts(g);
       if(p){ hb+=p[0]; ab+=p[1]; done++; }
     }
     st[h].bp+=hb; st[a].bp+=ab;
@@ -1029,7 +1035,7 @@ function renderIndividual(){
   TEAMS.forEach(t=>{ acc[t.id]={1:{p:0,g:0,matches:[]},2:{p:0,g:0,matches:[]},3:{p:0,g:0,matches:[]}}; });
   ROUNDS.forEach(r=>r.ms.forEach((m,mi)=>{
     for(let b=1;b<=3;b++){
-      const g = S.games[gkey(r.nr,mi,b)]; const p = g && pts(g.res);
+      const g = S.games[gkey(r.nr,mi,b)]; const p = gamePts(g);
       if(!p) continue;
       acc[m[0]][b].p+=p[0]; acc[m[0]][b].g++; acc[m[0]][b].matches.push({opp:m[1], pts:p[0]});
       acc[m[1]][b].p+=p[1]; acc[m[1]][b].g++; acc[m[1]][b].matches.push({opp:m[0], pts:p[1]});
@@ -1061,7 +1067,7 @@ const armkey = (stage,m)       => stage+'M'+m+'ARM';
 function roundRobinComplete(){
   return ROUNDS.every(r=>r.ms.every((m,mi)=>[1,2,3].every(b=>{
     const g = S.games[gkey(r.nr,mi,b)];
-    return g && pts(g.res);
+    return gamePts(g);
   })));
 }
 function getQualifiers(){
@@ -1088,7 +1094,7 @@ function computeLeg(stageId, m, leg){
   let p0pts=0, p1pts=0, done=0;
   for(let b=1;b<=3;b++){
     const g = S.games[pkey(stageId,m,leg,b)];
-    const p = g && pts(g.res);
+    const p = gamePts(g);
     if(p){ p0pts+=p[0]; p1pts+=p[1]; done++; }
   }
   return {leg, p0pts, p1pts, done};
@@ -1097,7 +1103,7 @@ function computeTiebreakStage(stageId, m, tbIdx){
   let p0pts=0, p1pts=0, done=0;
   for(let b=1;b<=3;b++){
     const g = S.games[tbkey(stageId,m,tbIdx,b)];
-    const p = g && pts(g.res);
+    const p = gamePts(g);
     if(p){ p0pts+=p[0]; p1pts+=p[1]; done++; }
   }
   let winner=null;
@@ -1142,7 +1148,7 @@ function boardHtml(r, mi, m, b){
   const [h,a] = m;
   const k = gkey(r.nr, mi, b);
   const g = S.games[k];
-  const p = g && pts(g.res);
+  const p = gamePts(g);
   const hw = homeIsWhite(b);
   const line = (teamId, board, isHome, val) => `
     <div class="row">
@@ -1184,7 +1190,7 @@ function renderSchedule(){
       const [h,a] = m;
       let hb=0, ab=0, any=false;
       for(let b=1;b<=3;b++){
-        const p = S.games[gkey(r.nr,mi,b)] && pts(S.games[gkey(r.nr,mi,b)].res);
+        const p = gamePts(S.games[gkey(r.nr,mi,b)]);
         if(p){ hb+=p[0]; ab+=p[1]; any=true; }
       }
       html += `<div class="match">
@@ -1204,7 +1210,7 @@ function renderSchedule(){
 function playoffBoardHtml(stageId, m, leg, p0, p1, b){
   const k = pkey(stageId, m, leg, b);
   const g = S.games[k];
-  const p = g && pts(g.res);
+  const p = gamePts(g);
   const p0White = playoffP0White(leg, b);
   const line = (teamId, isP0, val) => `
     <div class="row">
@@ -1228,7 +1234,7 @@ function playoffBoardHtml(stageId, m, leg, p0, p1, b){
 function tbBoardHtml(stageId, m, tbIdx, p0, p1, b){
   const k = tbkey(stageId, m, tbIdx, b);
   const g = S.games[k];
-  const p = g && pts(g.res);
+  const p = gamePts(g);
   const p0White = homeIsWhite(b);
   const line = (teamId, isP0, val) => `
     <div class="row">
