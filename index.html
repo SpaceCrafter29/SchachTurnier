@@ -382,6 +382,7 @@ const KEY = 'schachturnier_v1';
 
 /* ---------- State ---------- */
 let S = blank();
+let bgAnalyzeScheduled = false;
 
 function blank(){
   const players = {};
@@ -417,7 +418,12 @@ onSnapshot(docRef, (docSnap) => {
   }
   
   renderAll();
-  
+
+  if (!bgAnalyzeScheduled) {
+    bgAnalyzeScheduled = true;
+    setTimeout(() => backgroundPreAnalyze(), 4000);
+  }
+
   if (hasLocalData) {
     setDoc(docRef, S, {merge:true}).catch(error => console.error("Firebase Migration Error:", error));
   }
@@ -624,13 +630,21 @@ function eloDisplay(realRating, acc){
   return {text:'–', real:false};
 }
 
+/* Elo/Wertung isoliert extrahieren - eigene Funktion, damit Analyse und ggf. andere Stellen sie teilen */
+function extractLichessRatings(pgn){
+  const weM = pgn.match(/\[WhiteElo "(\d+)"\]/), beM = pgn.match(/\[BlackElo "(\d+)"\]/);
+  return (weM||beM) ? {white: weM?+weM[1]:null, black: beM?+beM[1]:null} : null;
+}
+function extractChesscomRatings(entry){
+  return (entry.white || entry.black) ? {white: entry.white?.rating||null, black: entry.black?.rating||null} : null;
+}
+
 async function fetchLichessPgn(id){
   const r = await fetch(`https://lichess.org/game/export/${id}?literate=false`, {cache:'no-store', headers:{'Accept':'application/x-chess-pgn'}});
   if(!r.ok) throw new Error('lichess.org: Partie nicht gefunden (HTTP '+r.status+')');
   const pgn = await r.text();
   if(!pgn.includes('[White')) throw new Error('lichess.org: Partie enthält keine Zugdaten');
-  const weM = pgn.match(/\[WhiteElo "(\d+)"\]/), beM = pgn.match(/\[BlackElo "(\d+)"\]/);
-  const ratings = (weM||beM) ? {white: weM?+weM[1]:null, black: beM?+beM[1]:null} : null;
+  const ratings = extractLichessRatings(pgn);
   return {pgn, accuracies:null, ratings};
 }
 
@@ -668,7 +682,7 @@ async function fetchChesscomPgn(id, type, roundNr){
   const games = archive?.games || [];
   const entry = games.find(g => g.url && g.url.includes(id));
   if(!entry || !entry.pgn) throw new Error('chess.com: Partie im offiziellen Archiv von "'+username+'" nicht gefunden (evtl. privates Profil).');
-  const ratings = (entry.white || entry.black) ? {white: entry.white?.rating||null, black: entry.black?.rating||null} : null;
+  const ratings = extractChesscomRatings(entry);
   return {pgn: entry.pgn, accuracies: entry.accuracies || null, ratings};
 }
 
@@ -807,6 +821,113 @@ window.backToSummary = function(){
 };
 
 let anaToken = 0;
+/* Kern-Analyse: PGN holen, Engine laufen lassen, Zug-Klassifizierung, Cache schreiben.
+   Läuft sowohl im sichtbaren Analyse-Modal (mit onProgress/isCancelled) als auch
+   unsichtbar im Hintergrund für andere Partien (backgroundPreAnalyze). */
+async function computeGameAnalysis(key, g, rn, opts){
+  opts = opts || {};
+  const onProgress = opts.onProgress || (()=>{});
+  const isCancelled = opts.isCancelled || (()=>false);
+
+  const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
+  const mi = +m[2], b = +m[3];
+  const round = ROUNDS.find(x=>x.nr===rn);
+  const pairing = round.ms[mi];
+  const [home, away] = pairing;
+  const whiteTeam = homeIsWhite(b) ? home : away;
+  const blackTeam = homeIsWhite(b) ? away : home;
+
+  if(!g || !g.url) throw new Error('Kein Partie-Link vorhanden.');
+  const info = extractGameInfo(g.url);
+  if(!info) throw new Error('Ungültiger Partie-Link.');
+
+  const cacheRef = doc(db, 'analysis', key);
+
+  /* Cache: bereits einmal berechnete Analyse wiederverwenden, statt erneut Rechenpower vom Handy zu brauchen */
+  try{
+    const cacheSnap = await getDoc(cacheRef);
+    if(isCancelled()) return null;
+    if(cacheSnap.exists()){
+      const c = cacheSnap.data();
+      if(c.gameUrl === g.url && c.depth === ANALYSIS_DEPTH && Array.isArray(c.whiteWPs) && c.whiteWPs.length > 1 && Array.isArray(c.fens)){
+        return {
+          whiteTeam, blackTeam, whiteWPs: c.whiteWPs, accWhite: c.accWhite, accBlack: c.accBlack,
+          usedOfficial: c.usedOfficial, gameUrl: g.url, ratings: c.ratings||null,
+          fens: c.fens, moves: c.moves||null, fromCache: true
+        };
+      }
+    }
+  }catch(e){ /* Cache nicht lesbar -> normal neu berechnen */ }
+
+  const {pgn, accuracies, ratings} = info.source === 'lichess.org'
+    ? await fetchLichessPgn(info.id)
+    : await fetchChesscomPgn(info.id, info.type, rn);
+  if(isCancelled()) return null;
+
+  const chess = new Chess();
+  chess.loadPgn(pgn);
+  const hist = chess.history({verbose:true});
+  if(hist.length === 0) throw new Error('Partie enthält keine Züge.');
+
+  const replay = new Chess();
+  const fens = [replay.fen()];
+  for(const mv of hist){ replay.move(mv.san); fens.push(replay.fen()); }
+
+  await getEngine();
+  if(isCancelled()) return null;
+
+  /* Stockfish kann eine Matt-/Patt-Stellung nicht bewerten (keine Legalzüge mehr) - Endstellung direkt auswerten */
+  const lastIsCheckmate = replay.isCheckmate();
+  const lastIsGameOver = replay.isGameOver();
+
+  const whiteWPs = [];
+  const bestmoves = [];
+  for(let i=0;i<fens.length;i++){
+    if(isCancelled()) return null;
+    const whiteToMove = i % 2 === 0;
+    if(i === fens.length-1 && lastIsGameOver){
+      whiteWPs.push(lastIsCheckmate ? (whiteToMove ? 0 : 100) : 50);
+      bestmoves.push(null);
+    } else {
+      const {score, bestmove} = await evalFen(fens[i]);
+      whiteWPs.push(whiteWinPercent(score, whiteToMove));
+      bestmoves.push(bestmove);
+    }
+    onProgress((i+1)/fens.length);
+  }
+  if(isCancelled()) return null;
+
+  const accWhiteMoves = [], accBlackMoves = [];
+  const moves = [];
+  for(let i=0;i<fens.length-1;i++){
+    const whiteIsMover = i % 2 === 0;
+    const before = moverWinPercent(whiteWPs[i], whiteIsMover);
+    const after = moverWinPercent(whiteWPs[i+1], whiteIsMover);
+    const loss = before-after;
+    const acc = accuracyFromLoss(loss);
+    (whiteIsMover ? accWhiteMoves : accBlackMoves).push(acc);
+    const played = hist[i].from + hist[i].to + (hist[i].promotion||'');
+    const isBest = bestmoves[i] === played;
+    const isSacrifice = isSacrificeMove(fens[i+1], hist[i].to, hist[i].color, hist[i].piece);
+    const {cls, label} = classifyMove(Math.max(0,loss), isBest, i, {
+      isSacrifice, moverWinBefore: before, moverWinAfter: after
+    });
+    moves.push({san: hist[i].san, to: hist[i].to, whiteIsMover, cls, label});
+  }
+  const avg = arr => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
+  const accWhite = accuracies?.white ?? avg(accWhiteMoves);
+  const accBlack = accuracies?.black ?? avg(accBlackMoves);
+  const usedOfficial = !!accuracies;
+
+  /* Ergebnis für andere Besucher hochladen, damit niemand die gleiche Partie zweimal analysieren muss */
+  setDoc(cacheRef, {
+    gameUrl: g.url, depth: ANALYSIS_DEPTH, whiteWPs, accWhite, accBlack, usedOfficial, ratings, fens, moves,
+    computedAt: Date.now()
+  }).catch(()=>{});
+
+  return {whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl: g.url, ratings, fens, moves, fromCache: false};
+}
+
 async function openAnalysis(key){
   const myToken = ++anaToken;
   const overlay = document.getElementById('ana-overlay');
@@ -826,100 +947,17 @@ async function openAnalysis(key){
   overlay.classList.add('on');
   body.innerHTML = `<div class="ana-status">⏳ Partie wird geladen…<div class="ana-progress"><div id="ana-prog" style="width:0%"></div></div></div>`;
 
-  const cacheRef = doc(db, 'analysis', key);
-
   try{
-    if(!g || !g.url) throw new Error('Kein Partie-Link vorhanden.');
-    const info = extractGameInfo(g.url);
-    if(!info) throw new Error('Ungültiger Partie-Link.');
-
-    /* Cache: bereits einmal berechnete Analyse wiederverwenden, statt erneut Rechenpower vom Handy zu brauchen */
-    try{
-      const cacheSnap = await getDoc(cacheRef);
-      if(myToken !== anaToken) return;
-      if(cacheSnap.exists()){
-        const c = cacheSnap.data();
-        if(c.gameUrl === g.url && c.depth === ANALYSIS_DEPTH && Array.isArray(c.whiteWPs) && c.whiteWPs.length > 1 && Array.isArray(c.fens)){
-          currentAnalysis = {
-            whiteTeam, blackTeam, whiteWPs: c.whiteWPs, accWhite: c.accWhite, accBlack: c.accBlack,
-            usedOfficial: c.usedOfficial, gameUrl: g.url, ratings: c.ratings||null,
-            fens: c.fens, moves: c.moves||null, fromCache: true
-          };
-          renderAnalysisResult(body, currentAnalysis, true);
-          return;
-        }
+    const result = await computeGameAnalysis(key, g, rn, {
+      isCancelled: () => myToken !== anaToken,
+      onProgress: (frac) => {
+        const prog = document.getElementById('ana-prog');
+        if(prog) prog.style.width = Math.round(frac*100)+'%';
       }
-    }catch(e){ /* Cache nicht lesbar -> normal neu berechnen */ }
-
-    const {pgn, accuracies, ratings} = info.source === 'lichess.org'
-      ? await fetchLichessPgn(info.id)
-      : await fetchChesscomPgn(info.id, info.type, rn);
-    if(myToken !== anaToken) return;
-
-    const chess = new Chess();
-    chess.loadPgn(pgn);
-    const hist = chess.history({verbose:true});
-    if(hist.length === 0) throw new Error('Partie enthält keine Züge.');
-
-    const replay = new Chess();
-    const fens = [replay.fen()];
-    for(const mv of hist){ replay.move(mv.san); fens.push(replay.fen()); }
-
-    await getEngine();
-    if(myToken !== anaToken) return;
-
-    /* Stockfish kann eine Matt-/Patt-Stellung nicht bewerten (keine Legalzüge mehr) - Endstellung direkt auswerten */
-    const lastIsCheckmate = replay.isCheckmate();
-    const lastIsGameOver = replay.isGameOver();
-
-    const whiteWPs = [];
-    const bestmoves = [];
-    for(let i=0;i<fens.length;i++){
-      if(myToken !== anaToken) return;
-      const whiteToMove = i % 2 === 0;
-      if(i === fens.length-1 && lastIsGameOver){
-        whiteWPs.push(lastIsCheckmate ? (whiteToMove ? 0 : 100) : 50);
-        bestmoves.push(null);
-      } else {
-        const {score, bestmove} = await evalFen(fens[i]);
-        whiteWPs.push(whiteWinPercent(score, whiteToMove));
-        bestmoves.push(bestmove);
-      }
-      const prog = document.getElementById('ana-prog');
-      if(prog) prog.style.width = Math.round((i+1)/fens.length*100)+'%';
-    }
-    if(myToken !== anaToken) return;
-
-    const accWhiteMoves = [], accBlackMoves = [];
-    const moves = [];
-    for(let i=0;i<fens.length-1;i++){
-      const whiteIsMover = i % 2 === 0;
-      const before = moverWinPercent(whiteWPs[i], whiteIsMover);
-      const after = moverWinPercent(whiteWPs[i+1], whiteIsMover);
-      const loss = before-after;
-      const acc = accuracyFromLoss(loss);
-      (whiteIsMover ? accWhiteMoves : accBlackMoves).push(acc);
-      const played = hist[i].from + hist[i].to + (hist[i].promotion||'');
-      const isBest = bestmoves[i] === played;
-      const isSacrifice = isSacrificeMove(fens[i+1], hist[i].to, hist[i].color, hist[i].piece);
-      const {cls, label} = classifyMove(Math.max(0,loss), isBest, i, {
-        isSacrifice, moverWinBefore: before, moverWinAfter: after
-      });
-      moves.push({san: hist[i].san, to: hist[i].to, whiteIsMover, cls, label});
-    }
-    const avg = arr => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
-    const accWhite = accuracies?.white ?? avg(accWhiteMoves);
-    const accBlack = accuracies?.black ?? avg(accBlackMoves);
-    const usedOfficial = !!accuracies;
-
-    currentAnalysis = {whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl: g.url, ratings, fens, moves, fromCache: false};
-    renderAnalysisResult(body, currentAnalysis, false);
-
-    /* Ergebnis für andere Besucher hochladen, damit niemand die gleiche Partie zweimal analysieren muss */
-    setDoc(cacheRef, {
-      gameUrl: g.url, depth: ANALYSIS_DEPTH, whiteWPs, accWhite, accBlack, usedOfficial, ratings, fens, moves,
-      computedAt: Date.now()
-    }).catch(()=>{});
+    });
+    if(myToken !== anaToken || !result) return;
+    currentAnalysis = result;
+    renderAnalysisResult(body, currentAnalysis, result.fromCache);
   }catch(e){
     if(myToken !== anaToken) return;
     body.innerHTML = `<div class="ana-err">❌ ${esc(e.message)}<br><br><a href="${esc(g?.url||'')}" target="_blank" rel="noopener">Partie stattdessen extern ansehen ↗</a></div>`;
@@ -932,6 +970,39 @@ function closeAnalysis(){
 }
 window.openAnalysis = openAnalysis;
 window.closeAnalysis = closeAnalysis;
+
+/* Füllt den analysis-Cache in Firebase im Hintergrund, ohne dass jemand auf "Analyse" klicken muss —
+   damit sammeln sich echte Elo/Zugdaten für den automatischen Turnierbericht, sobald genug Leute
+   die Seite einfach nur besuchen (oder sobald jemand ein Ergebnis meldet). Nur 1 Partie pro Aufruf,
+   nur wenn gerade kein Analyse-Modal offen ist, und immer mit der geringsten Tiefe (10) - das ist
+   Fremd-Rechenpower im Hintergrund, die soll niemandes Akku/Handy strapazieren. */
+const BG_ANALYSIS_DEPTH = 10;
+let bgAnalyzeRunning = false;
+async function backgroundPreAnalyze(onlyKey){
+  if(bgAnalyzeRunning || currentAnalysis) return;
+  bgAnalyzeRunning = true;
+  const savedDepth = ANALYSIS_DEPTH;
+  try{
+    const candidates = onlyKey ? [[onlyKey, S.games[onlyKey]]] : Object.entries(S.games);
+    for(const [key, g] of candidates){
+      if(!g || !g.url || g.dnf || !validUrl(g.url)) continue;
+      const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
+      if(!m) continue; // nur Round-Robin-Bretter im Hintergrund, K.o.-Runden nicht
+      const rn = +m[1];
+      try{
+        const cacheSnap = await getDoc(doc(db, 'analysis', key));
+        if(cacheSnap.exists() && cacheSnap.data().gameUrl === g.url) continue; /* schon irgendeine gültige Analyse vorhanden, egal welche Tiefe */
+      }catch(e){ continue; }
+      if(currentAnalysis) return; /* Nutzer hat inzwischen selbst eine Analyse geöffnet */
+      ANALYSIS_DEPTH = BG_ANALYSIS_DEPTH;
+      await computeGameAnalysis(key, g, rn, { isCancelled: () => !!currentAnalysis }).catch(()=>{});
+      break; /* nur eine Partie pro Aufruf */
+    }
+  } finally {
+    ANALYSIS_DEPTH = savedDepth;
+    bgAnalyzeRunning = false;
+  }
+}
 
 /* ---------- Tabelle ---------- */
 function computeStandings(overrideGames){
@@ -1482,6 +1553,7 @@ async function submitResult(){
   S.games[k] = {res, url: type==='dnf'?'':url, dnf: type==='dnf', ...extra};
   updateGameInFirebase(k, S.games[k]);
   renderAll();
+  if(type !== 'dnf') backgroundPreAnalyze(k); /* frisch gemeldete Partie direkt im Hintergrund analysieren, nicht abwarten */
   box.innerHTML = `<div class="msg good">✅ Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
   document.getElementById('f-url').value = '';
   document.getElementById('f-res').value = '';
