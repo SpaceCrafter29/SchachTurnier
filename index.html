@@ -70,7 +70,9 @@ button.btn:disabled{opacity:.5;cursor:not-allowed}
 .rd{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 4px}
 .rd b{font-size:15px}
 .rd span{font-size:12px;color:var(--muted)}
-details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::marker{display:none;content:""}
 .tierhdr{font-size:12px;color:var(--accent);font-weight:700;margin:12px 0 4px}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40px}
 
@@ -147,7 +149,6 @@ tr.sim-q td{background:#fff4e0}
   <button data-tab="melden">Melden</button>
   <button data-tab="bericht">Bericht</button>
   <button data-tab="regeln">Regeln</button>
-  <button data-tab="sim">Simulator</button>
 </nav>
 
 <main>
@@ -300,11 +301,11 @@ tr.sim-q td{background:#fff4e0}
     <div class="card note" style="text-align:center;font-size:13px">
       Noch Fragen? Stellt sie gerne :)
     </div>
-  </section>
 
-  <section id="tab-sim">
-    <h2>Was-wäre-wenn-Simulator</h2>
-    <div id="simulator"></div>
+    <details style="margin-top:16px">
+      <summary style="padding:8px;background:var(--panel2);border-radius:6px;font-weight:600;user-select:none">Was-wäre-wenn-Simulator</summary>
+      <div style="padding-top:8px"><div id="simulator"></div></div>
+    </details>
   </section>
 </main>
 
@@ -1269,11 +1270,9 @@ function boardHtml(r, mi, m, b){
 }
 
 function renderSchedule(){
-  const currentRound = getCurrentRound();
   let html = '';
   ROUNDS.forEach(r=>{
-    const isOpen = r.nr === currentRound;
-    html += `<details ${isOpen?'open':''} style="margin-bottom:12px">
+    html += `<details style="margin-bottom:12px">
       <summary style="cursor:pointer;padding:8px;background:var(--panel2);border-radius:6px;font-weight:600;user-select:none">
         <b>${r.nr}. Runde</b> <span style="color:var(--muted);font-weight:400">${r.date}</span>
       </summary>
