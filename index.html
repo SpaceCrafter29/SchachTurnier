@@ -74,6 +74,10 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0;l
 details summary::-webkit-details-marker{display:none}
 details summary::marker{display:none;content:""}
 .tierhdr{font-size:12px;color:var(--accent);font-weight:700;margin:12px 0 4px}
+.subnav-btn{flex:1;padding:9px 4px;font-size:13px;font-weight:700;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+.subnav-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.subpanel{display:none}
+.subpanel.on{display:block}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40px}
 
 .ana-link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:11px;cursor:pointer;font:inherit}
@@ -148,7 +152,7 @@ tr.sim-q td{background:#fff4e0}
   <button data-tab="plan">Spielplan</button>
   <button data-tab="melden">Melden</button>
   <button data-tab="bericht">Bericht</button>
-  <button data-tab="regeln">Regeln</button>
+  <button data-tab="regeln">Mehr</button>
 </nav>
 
 <main>
@@ -218,6 +222,7 @@ tr.sim-q td{background:#fff4e0}
     <!-- BERICHT:START -->
     <div class="card">
       <div class="tierhdr">Stand nach Spieltag 5</div>
+      <div class="note" style="font-size:11px;margin-bottom:8px">Stand: 20.08.2026</div>
       <div class="note" style="font-size:14px;line-height:1.7">
         <div style="margin:6px 0">🇳🇴 <b>Norwegen</b>: Ungeschlagener Spitzenreiter, Brett 1 auch ungeschlagen – Halbfinale schon sicher.</div>
         <div style="margin:6px 0">🌀 <b>Gatzendimension</b>: Stabile Nummer 2, teilt sich mit Norwegen die Brett-2-Spitze.</div>
@@ -231,9 +236,18 @@ tr.sim-q td{background:#fff4e0}
     </div>
     <div class="card note" style="text-align:center;font-size:12px">Wird automatisch aktualisiert.</div>
     <!-- BERICHT:END -->
+
+    <h2>Frühere Berichte</h2>
+    <div id="past-reports" class="card note">Lade…</div>
   </section>
 
   <section id="tab-regeln">
+    <div class="subnav" style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="subnav-btn on" data-sub="regeln" onclick="switchSub('regeln')">📖 Regeln</button>
+      <button class="subnav-btn" data-sub="sim" onclick="switchSub('sim')">🎲 Simulator</button>
+    </div>
+
+    <div id="sub-regeln" class="subpanel on">
     <h2>Turnierregeln</h2>
 
     <div class="card">
@@ -301,11 +315,12 @@ tr.sim-q td{background:#fff4e0}
     <div class="card note" style="text-align:center;font-size:13px">
       Noch Fragen? Stellt sie gerne :)
     </div>
+    </div>
 
-    <details style="margin-top:16px">
-      <summary style="padding:8px;background:var(--panel2);border-radius:6px;font-weight:600;user-select:none">Was-wäre-wenn-Simulator</summary>
-      <div style="padding-top:8px"><div id="simulator"></div></div>
-    </details>
+    <div id="sub-sim" class="subpanel">
+      <h2>Was-wäre-wenn-Simulator</h2>
+      <div id="simulator"></div>
+    </div>
   </section>
 </main>
 
@@ -819,6 +834,11 @@ window.openMoveReview = function(ply){
 window.backToSummary = function(){
   if(!currentAnalysis) return;
   renderAnalysisResult(document.getElementById('ana-body'), currentAnalysis, currentAnalysis.fromCache);
+};
+
+window.switchSub = function(name){
+  document.querySelectorAll('.subnav-btn').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
+  document.querySelectorAll('.subpanel').forEach(p => p.classList.toggle('on', p.id === 'sub-'+name));
 };
 
 let anaToken = 0;
@@ -1576,8 +1596,41 @@ document.getElementById('f-leg').onchange = fillBoards;
 document.getElementById('f-board').onchange = fillRes;
 document.getElementById('f-send').onclick = submitResult;
 
+/* ---------- Frühere Berichte (Archiv) ---------- */
+function mdToHtml(md){
+  return md.split('\n').map(line=>{
+    line = line.trim();
+    if(!line) return '';
+    if(line.startsWith('# ')) return `<div style="font-weight:700;margin-bottom:6px">${esc(line.slice(2))}</div>`;
+    const withBold = esc(line).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    return `<div style="margin:5px 0">${withBold}</div>`;
+  }).join('');
+}
+async function loadPastReports(){
+  const el = document.getElementById('past-reports');
+  if(!el) return;
+  const found = [];
+  for(let n=1;n<=7;n++){
+    try{
+      const r = await fetch(`reports/spieltag-${n}.md`, {cache:'no-store'});
+      if(r.ok){
+        const text = await r.text();
+        if(text.trim()) found.push({n, text});
+      }
+    }catch(e){}
+  }
+  if(found.length === 0){ el.textContent = 'Noch keine archivierten Berichte.'; return; }
+  el.className = '';
+  el.innerHTML = found.reverse().map(f => `
+    <details style="margin-bottom:8px">
+      <summary style="padding:8px;background:var(--panel2);border-radius:6px;font-weight:600;user-select:none">Spieltag ${f.n}</summary>
+      <div class="card" style="margin-top:8px;font-size:14px;line-height:1.6">${mdToHtml(f.text)}</div>
+    </details>`).join('');
+}
+
 /* Start */
 fillRounds(); fillMatches(); renderAll();
+loadPastReports();
 </script>
 </body>
 </html>
