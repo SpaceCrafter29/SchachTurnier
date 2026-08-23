@@ -231,22 +231,10 @@ tr.sim-q td{background:#fff4e0}
       </div>
     </div>
     <div class="card">
-      <div class="tierhdr">Zwischenstand Tabelle</div>
-      <div class="scroll"><table>
-        <thead><tr><th></th><th class="team">Team</th><th>MP</th><th>BP</th></tr></thead>
-        <tbody>
-          <tr><td class="rank">1</td><td class="team">🇳🇴 Norwegen</td><td class="mp">10</td><td>11½</td></tr>
-          <tr><td class="rank">2</td><td class="team">🌀 Gatzendimension</td><td class="mp">7</td><td>8</td></tr>
-          <tr><td class="rank">3</td><td class="team">🇺🇿 Uzbekistan</td><td class="mp">6</td><td>9</td></tr>
-          <tr><td class="rank">4</td><td class="team">🇻🇦 Vatikan</td><td class="mp">6</td><td>7½</td></tr>
-          <tr><td class="rank">5</td><td class="team">🏝️ Barbuda</td><td class="mp">5</td><td>8½</td></tr>
-          <tr><td class="rank">6</td><td class="team">🇨🇳 China</td><td class="mp">5</td><td>7½</td></tr>
-          <tr><td class="rank">7</td><td class="team">🇦🇬 Antigua</td><td class="mp">1</td><td>4</td></tr>
-          <tr><td class="rank">8</td><td class="team">🇰🇵 Nordkorea</td><td class="mp">0</td><td>0</td></tr>
-        </tbody>
-      </table></div>
+      <div class="tierhdr">Aktuelle Tabelle</div>
+      <div class="scroll"><table id="bericht-standings"></table></div>
     </div>
-    <div class="card note" style="text-align:center;font-size:12px">Wird automatisch aktualisiert.</div>
+    <div class="card note" style="text-align:center;font-size:12px">Zwischenstand live – aktualisiert sich automatisch mit jedem gemeldeten Ergebnis.</div>
     <!-- BERICHT:END -->
 
     <h2>Frühere Berichte</h2>
@@ -1077,8 +1065,11 @@ function renderStandings(){
       <td>${s.sp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
       <td class="mp">${s.mp}</td><td>${fmt(s.bp)}</td><td>${s.sb}</td>
     </tr>`).join('');
-  document.getElementById('standings').innerHTML =
-    `<thead><tr><th></th><th class="team">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>MP</th><th>BP</th><th>SB</th></tr></thead><tbody>${rows}</tbody>`;
+  const html = `<thead><tr><th></th><th class="team">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>MP</th><th>BP</th><th>SB</th></tr></thead><tbody>${rows}</tbody>`;
+  document.getElementById('standings').innerHTML = html;
+  /* Bericht-Tab zeigt die selbe, live berechnete Tabelle statt einer statischen Momentaufnahme */
+  const berichtEl = document.getElementById('bericht-standings');
+  if(berichtEl) berichtEl.innerHTML = html;
 }
 
 /* ---------- Simulator: Was-wäre-wenn für offene Round-Robin-Spiele ---------- */
