@@ -556,15 +556,22 @@ async function verifyChessGame(u){
     }
     const proxy = 'https://corsproxy.io/?';
     const types = info.type ? [info.type] : ['live','daily'];
+    let confirmedMissing = false;
     for(const t of types){
       const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${info.id}`);
-      const r = await fetch(proxy+target, {cache:'no-store'});
-      if(r.ok){
-        const data = await r.json();
-        if(data && (data.game || data.players)) return {ok:true, data};
-      }
+      try{
+        const r = await fetch(proxy+target, {cache:'no-store'});
+        if(r.ok){
+          const data = await r.json();
+          if(data && (data.game || data.players)) return {ok:true, data};
+          /* chess.com hat gültig geantwortet, aber ohne Partiedaten -> Partie existiert vermutlich wirklich nicht */
+          confirmedMissing = true;
+        }
+        /* r nicht ok (z.B. Proxy down/blockiert/Rate-Limit) ist KEIN Beweis, dass die Partie nicht existiert */
+      }catch(e){ /* Netzwerk-/Proxy-Fehler für diesen Typ, nächsten versuchen bzw. unten offen fehlschlagen */ }
     }
-    return {ok:false, msg:'Partie mit dieser ID existiert nicht auf chess.com'};
+    if(confirmedMissing) return {ok:false, msg:'Partie mit dieser ID existiert nicht auf chess.com'};
+    return {ok:true, msg:'Format OK (API-Prüfung nicht möglich)'};
   }catch(e){
     return {ok:true, msg:'Format OK (API-Prüfung nicht möglich)'};
   }
