@@ -15,5 +15,3 @@
 🇦🇬 **Antigua** (0-2-4, 2 MP): Erstes Remis seit Wochen gegen Vatikan – kleines Lebenszeichen, Top 4 bleibt aber weit weg.
 
 🇰🇵 **Nordkorea** (0-0-6, 0 MP): Weiterhin sieglos, Top 4 längst unmöglich. Schon 12 der bisherigen 18 Bretter kampflos verloren.
-
-⚡ Trotz 540 Elo Unterschied sichert sich Barbuda auf Brett 1 den Sieg gegen Uzbekistan.
