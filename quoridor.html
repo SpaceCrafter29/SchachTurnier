@@ -28,19 +28,19 @@ main{padding:12px;max-width:520px;margin:0 auto}
 .share-row input{flex:1;background:#fafafa;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:8px;font-size:12.5px}
 .share-row button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:8px 10px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
 
-.board-wrap{width:100%;aspect-ratio:1;position:relative}
+.board-wrap{width:100%;aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;background:var(--panel2)}
 .qboard{width:100%;height:100%;display:grid;user-select:none}
-.qcell{position:relative;border-radius:2px}
+.qcell{position:relative;border-radius:5px}
 .qcell.l{background:#f0d9b5}
 .qcell.d{background:#dcb98a}
 .qcell.goal-a{box-shadow:inset 0 0 0 2px rgba(217,67,46,.35)}
 .qcell.goal-b{box-shadow:inset 0 0 0 2px rgba(43,125,233,.35)}
-.qwall{background:#4a3222;border-radius:2px;z-index:1}
-.qslot{border-radius:3px;cursor:pointer;margin:-8px;position:relative;z-index:2}
+.qwall{background:#4a3222;border-radius:5px;z-index:1}
+.qslot{border-radius:5px;cursor:pointer;margin:-8px;position:relative;z-index:2}
 .qslot.ok{background:rgba(255,140,0,.35)}
 .qslot.ok:active,.qslot.ok:hover{background:rgba(255,140,0,.65)}
 .qslot.bad{background:rgba(150,150,150,.12);cursor:not-allowed}
-.qmove{background:rgba(40,167,69,.32);border-radius:6px;cursor:pointer;width:100%;height:100%;z-index:1}
+.qmove{background:rgba(40,167,69,.32);border-radius:8px;cursor:pointer;width:100%;height:100%;z-index:1}
 .qmove:active,.qmove:hover{background:rgba(40,167,69,.6)}
 .qpawn{align-self:center;justify-self:center;width:62%;height:62%;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.25) inset;pointer-events:none}
 .qpawn.a{background:var(--a-color)}
@@ -95,7 +95,6 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40p
     </div>
     <div class="btnrow">
       <button class="btn sec" id="btn-undo">↩️ Zug zurück</button>
-      <button class="btn sec" id="btn-flip">🔄 Brett drehen</button>
       <button class="btn" id="btn-new">🆕 Neues Spiel</button>
     </div>
   </div>
@@ -270,7 +269,6 @@ const clientId = getClientId();
 let myColor = null; /* 'a' | 'b' | 'spectator' | null */
 let currentActions = [];
 let state = initialState();
-let flipped = false;
 let mode = 'move';
 
 async function bootstrapRoom(){
@@ -293,7 +291,6 @@ async function bootstrapRoom(){
       else if(!data.a){ myColor = 'a'; await updateDoc(roomRef, {a: clientId}); }
       else if(!data.b){ myColor = 'b'; await updateDoc(roomRef, {b: clientId}); }
       else { myColor = 'spectator'; }
-      flipped = myColor === 'b';
       claiming = false;
     }
     if(mySeq !== snapSeq) return;
@@ -339,10 +336,6 @@ bootstrapRoom();
 function canInteract(){
   return (myColor==='a' || myColor==='b') && !state.winner && state.turn===myColor;
 }
-function fx(x){ return flipped ? 8-x : x; }
-function fy(y){ return flipped ? 8-y : y; }
-function fsx(x){ return flipped ? 7-x : x; }
-function fsy(y){ return flipped ? 7-y : y; }
 
 function renderBoard(){
   const boardEl = document.getElementById('board');
@@ -356,18 +349,18 @@ function renderBoard(){
     let cls = 'qcell ' + (light?'l':'d');
     if(y===8) cls += ' goal-a';
     if(y===0) cls += ' goal-b';
-    html += `<div class="${cls}" style="grid-column:${2*fx(x)+1};grid-row:${2*fy(y)+1}"></div>`;
+    html += `<div class="${cls}" style="grid-column:${2*x+1};grid-row:${2*y+1}"></div>`;
   }
   for(const w of state.walls){
     if(w.orient==='h'){
-      html += `<div class="qwall" style="grid-column:${2*fsx(w.x)+1} / span 3;grid-row:${2*fsy(w.y)+2}"></div>`;
+      html += `<div class="qwall" style="grid-column:${2*w.x+1} / span 3;grid-row:${2*w.y+2}"></div>`;
     } else {
-      html += `<div class="qwall" style="grid-column:${2*fsx(w.x)+2};grid-row:${2*fsy(w.y)+1} / span 3"></div>`;
+      html += `<div class="qwall" style="grid-column:${2*w.x+2};grid-row:${2*w.y+1} / span 3"></div>`;
     }
   }
   if(mode==='move' && canInteract()){
     for(const m of legalMoves(state)){
-      html += `<div class="qmove" style="grid-column:${2*fx(m.x)+1};grid-row:${2*fy(m.y)+1}" data-mx="${m.x}" data-my="${m.y}"></div>`;
+      html += `<div class="qmove" style="grid-column:${2*m.x+1};grid-row:${2*m.y+1}" data-mx="${m.x}" data-my="${m.y}"></div>`;
     }
   }
   if((mode==='wall-h'||mode==='wall-v') && canInteract() && state.wallsLeft[myColor]>0){
@@ -376,14 +369,14 @@ function renderBoard(){
       const ok = canPlaceWall(state, x, y, orient);
       const cls = 'qslot ' + (ok?'ok':'bad');
       if(orient==='h'){
-        html += `<div class="${cls}" style="grid-column:${2*fsx(x)+1} / span 3;grid-row:${2*fsy(y)+2}" data-wx="${x}" data-wy="${y}" data-wo="h" data-ok="${ok}"></div>`;
+        html += `<div class="${cls}" style="grid-column:${2*x+1} / span 3;grid-row:${2*y+2}" data-wx="${x}" data-wy="${y}" data-wo="h" data-ok="${ok}"></div>`;
       } else {
-        html += `<div class="${cls}" style="grid-column:${2*fsx(x)+2};grid-row:${2*fsy(y)+1} / span 3" data-wx="${x}" data-wy="${y}" data-wo="v" data-ok="${ok}"></div>`;
+        html += `<div class="${cls}" style="grid-column:${2*x+2};grid-row:${2*y+1} / span 3" data-wx="${x}" data-wy="${y}" data-wo="v" data-ok="${ok}"></div>`;
       }
     }
   }
-  html += `<div class="qpawn a" style="grid-column:${2*fx(state.pawns.a.x)+1};grid-row:${2*fy(state.pawns.a.y)+1}"></div>`;
-  html += `<div class="qpawn b" style="grid-column:${2*fx(state.pawns.b.x)+1};grid-row:${2*fy(state.pawns.b.y)+1}"></div>`;
+  html += `<div class="qpawn a" style="grid-column:${2*state.pawns.a.x+1};grid-row:${2*state.pawns.a.y+1}"></div>`;
+  html += `<div class="qpawn b" style="grid-column:${2*state.pawns.b.x+1};grid-row:${2*state.pawns.b.y+1}"></div>`;
   boardEl.innerHTML = html;
 }
 
@@ -405,10 +398,6 @@ async function commitAction(action){
 document.getElementById('btn-undo').onclick = () => {
   if(currentActions.length===0) return;
   updateDoc(roomRef, {actions: currentActions.slice(0,-1)});
-};
-document.getElementById('btn-flip').onclick = () => {
-  flipped = !flipped;
-  renderBoard();
 };
 document.getElementById('btn-new').onclick = () => {
   if(currentActions.length && !confirm('Neues Spiel starten? Der aktuelle Spielstand geht für euch beide verloren.')) return;
