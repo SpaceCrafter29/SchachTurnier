@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eröffnungstraining</title>
+<style>
+:root{
+  --bg:#f5f5f5; --panel:#ffffff; --panel2:#efefef; --line:#d0d0d0;
+  --txt:#222; --muted:#666; --accent:#ff8c00; --ok:#28a745;
+  --white:#f2f3f7; --black:#0b0c10;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent);font-weight:600}
+header{background:var(--accent);padding:18px 14px;text-align:center}
+header h1{margin:0;font-size:24px;letter-spacing:.5px}
+header p{margin:4px 0 0;font-size:12px;opacity:.9}
+main{padding:12px;max-width:520px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.tierhdr{font-size:12px;color:var(--accent);font-weight:700;margin:0 0 8px}
+.note{font-size:12px;color:var(--muted)}
+
+.board-row{display:flex;gap:8px;align-items:stretch}
+.chessboard{flex:1;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:pointer;user-select:none}
+.chessboard .sq{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;min-width:0;min-height:0}
+.chessboard .sq.l{background:#f0d9b5}
+.chessboard .sq.d{background:#b58863}
+.chessboard .sq.sel{box-shadow:inset 0 0 0 3px var(--accent)}
+.chessboard .sq.chk{box-shadow:inset 0 0 0 3px #d32f2f}
+.chessboard .sq img{width:82%;height:82%;object-fit:contain;pointer-events:none}
+.chessboard .sq .dot{position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(0,0,0,.28);pointer-events:none}
+.chessboard .sq .dot.cap{width:88%;height:88%;background:none;border-radius:50%;box-shadow:inset 0 0 0 4px rgba(0,0,0,.28)}
+
+.evalbar{width:26px;flex:none;position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--black)}
+.evalbar-fill{position:absolute;left:0;right:0;bottom:0;background:var(--white);height:50%;transition:height .35s ease}
+.evalbar-label{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:9px;font-weight:800;color:#333;z-index:2}
+.evalbar-label.top{bottom:auto;top:2px;color:#eee}
+
+.turn-indicator{text-align:center;font-weight:700;font-size:13px;margin-top:10px}
+.turn-indicator .thinking{color:var(--muted);font-weight:400;font-size:11px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button.btn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 12px;font-weight:700;cursor:pointer;font-size:13px;flex:1}
+button.btn.sec{background:#e0e0e0;color:#222;border:1px solid var(--line)}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.depth-row{margin-top:12px;padding:9px 11px;background:var(--panel2);border-radius:8px}
+.depth-row label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+.depth-row label b{color:var(--txt);font-variant-numeric:tabular-nums}
+.depth-row input[type=range]{width:100%;accent-color:var(--accent)}
+
+.move-list{font-size:13px;line-height:1.9;font-variant-numeric:tabular-nums}
+.move-list .mv-num{color:var(--muted);margin-right:2px}
+.move-list .mv-san{margin-right:12px}
+
+.promo-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center}
+.promo-overlay.on{display:flex}
+.promo-box{background:var(--panel);border-radius:12px;padding:16px;text-align:center}
+.promo-box .t{font-size:13px;color:var(--muted);margin-bottom:10px}
+.promo-box .opts{display:flex;gap:8px}
+.promo-box button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:pointer}
+.promo-box button img{width:44px;height:44px;display:block}
+
+footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>♟️ Eröffnungstraining</h1>
+  <p>Lokal zu zweit spielen, Züge zurücknehmen, Stellung live bewerten lassen</p>
+</header>
+
+<main>
+  <div class="card">
+    <div class="board-row">
+      <div class="evalbar"><div class="evalbar-fill" id="eval-fill"></div><div class="evalbar-label" id="eval-label">0.0</div></div>
+      <div class="chessboard" id="board"></div>
+    </div>
+    <div class="turn-indicator" id="turn-ind">Weiß am Zug</div>
+    <div class="btnrow">
+      <button class="btn sec" id="btn-undo">↩️ Zug zurück</button>
+      <button class="btn sec" id="btn-flip">🔄 Brett drehen</button>
+      <button class="btn" id="btn-new">🆕 Neues Spiel</button>
+    </div>
+    <div class="depth-row">
+      <label>Engine-Tiefe: <b id="depth-val">14</b></label>
+      <input type="range" min="8" max="20" value="14" id="depth-range">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tierhdr">Zugliste</div>
+    <div class="move-list" id="move-list">–</div>
+  </div>
+
+  <div class="card note">
+    Die Bewertung stammt aus einer lokalen Stockfish-Engine, die direkt im Browser läuft (keine Server-Anfrage, kein Konto nötig). Der Balken zeigt die Gewinnwahrscheinlichkeit für Weiß – ganz weiß = klar gewonnen für Weiß, ganz schwarz = klar gewonnen für Schwarz.
+  </div>
+</main>
+
+<footer><a href="./index.html">← Zurück zum Turnier</a></footer>
+
+<div class="promo-overlay" id="promo-overlay">
+  <div class="promo-box">
+    <div class="t">Bauer umwandeln in:</div>
+    <div class="opts" id="promo-opts"></div>
+  </div>
+</div>
+
+<script type="module">
+"use strict";
+import { Chess } from "./engine/chess.esm.js";
+
+const chess = new Chess();
+let selected = null;
+let orientation = 'white';
+let depth = 14;
+
+/* ---------- Board rendering ---------- */
+function pieceFile(p){
+  return (p.color==='w' ? p.type.toUpperCase() : p.type) + (p.color==='w' ? '-white' : '-black');
+}
+
+function renderBoard(){
+  const boardEl = document.getElementById('board');
+  const files = orientation==='white' ? ['a','b','c','d','e','f','g','h'] : ['h','g','f','e','d','c','b','a'];
+  const ranks = orientation==='white' ? [8,7,6,5,4,3,2,1] : [1,2,3,4,5,6,7,8];
+
+  let legalTargets = [];
+  if(selected) legalTargets = chess.moves({square:selected, verbose:true}).map(m=>m.to);
+
+  let checkSquare = null;
+  if(chess.isCheck()){
+    const us = chess.turn();
+    for(const row of chess.board()) for(const cell of row){
+      if(cell && cell.type==='k' && cell.color===us) checkSquare = cell.square;
+    }
+  }
+
+  let html = '';
+  for(const rank of ranks){
+    for(const file of files){
+      const sq = file+rank;
+      const fileIdx = 'abcdefgh'.indexOf(file);
+      const light = (fileIdx+rank)%2===0;
+      const piece = chess.get(sq);
+      let inner = piece ? `<img src="./pieces/${pieceFile(piece)}.svg" alt="" draggable="false">` : '';
+      if(legalTargets.includes(sq)) inner += `<div class="dot${piece?' cap':''}"></div>`;
+      const cls = ['sq', light?'l':'d'];
+      if(sq===selected) cls.push('sel');
+      if(sq===checkSquare) cls.push('chk');
+      html += `<div class="${cls.join(' ')}" data-square="${sq}">${inner}</div>`;
+    }
+  }
+  boardEl.innerHTML = html;
+}
+
+function renderMoveList(){
+  const hist = chess.history({verbose:true});
+  const el = document.getElementById('move-list');
+  if(!hist.length){ el.textContent = '–'; return; }
+  let html = '';
+  for(let i=0;i<hist.length;i+=2){
+    const num = i/2+1;
+    html += `<span class="mv-num">${num}.</span><span class="mv-san">${hist[i].san}</span>`;
+    if(hist[i+1]) html += `<span class="mv-san">${hist[i+1].san}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderStatus(){
+  const el = document.getElementById('turn-ind');
+  if(chess.isCheckmate()){
+    el.textContent = (chess.turn()==='w'?'Schwarz':'Weiß') + ' gewinnt durch Matt';
+  } else if(chess.isDraw()){
+    el.textContent = 'Remis';
+  } else {
+    el.textContent = (chess.turn()==='w'?'Weiß':'Schwarz') + ' am Zug' + (chess.isCheck()?' – Schach!':'');
+  }
+  document.getElementById('btn-undo').disabled = chess.history().length===0;
+}
+
+function renderAll(){ renderBoard(); renderMoveList(); renderStatus(); }
+
+/* ---------- Interaktion ---------- */
+function onSquareClick(sq){
+  const piece = chess.get(sq);
+  if(selected){
+    if(sq===selected){ selected=null; renderBoard(); return; }
+    const legal = chess.moves({square:selected, verbose:true}).filter(m=>m.to===sq);
+    if(legal.length){
+      if(legal[0].promotion){
+        openPromotionPicker(chess.turn(), promo=>commitMove({from:selected, to:sq, promotion:promo}));
+      } else {
+        commitMove({from:selected, to:sq});
+      }
+      return;
+    }
+    if(piece && piece.color===chess.turn()){ selected=sq; renderBoard(); return; }
+    selected=null; renderBoard(); return;
+  }
+  if(piece && piece.color===chess.turn()){ selected=sq; renderBoard(); }
+}
+document.getElementById('board').addEventListener('click', e=>{
+  const sqEl = e.target.closest('.sq');
+  if(sqEl && !document.getElementById('promo-overlay').classList.contains('on')) onSquareClick(sqEl.dataset.square);
+});
+
+function commitMove(moveObj){
+  const res = chess.move(moveObj);
+  if(!res) return;
+  selected = null;
+  renderAll();
+  scheduleEval();
+}
+
+document.getElementById('btn-undo').onclick = () => {
+  if(!chess.undo()) return;
+  selected = null;
+  renderAll();
+  scheduleEval();
+};
+document.getElementById('btn-flip').onclick = () => {
+  orientation = orientation==='white' ? 'black' : 'white';
+  renderBoard();
+};
+document.getElementById('btn-new').onclick = () => {
+  if(chess.history().length && !confirm('Neues Spiel starten? Der aktuelle Spielstand geht verloren.')) return;
+  chess.reset();
+  selected = null;
+  renderAll();
+  scheduleEval();
+};
+document.getElementById('depth-range').oninput = e => {
+  depth = +e.target.value;
+  document.getElementById('depth-val').textContent = depth;
+  scheduleEval();
+};
+
+/* ---------- Promotion ---------- */
+function openPromotionPicker(color, onPick){
+  const overlay = document.getElementById('promo-overlay');
+  const opts = document.getElementById('promo-opts');
+  opts.innerHTML = ['q','r','b','n'].map(t=>{
+    const file = pieceFile({type:t, color});
+    return `<button data-p="${t}"><img src="./pieces/${file}.svg" alt=""></button>`;
+  }).join('');
+  overlay.classList.add('on');
+  opts.querySelectorAll('button').forEach(b=>{
+    b.onclick = () => { overlay.classList.remove('on'); onPick(b.dataset.p); };
+  });
+}
+
+/* ---------- Stockfish-Bewertung ---------- */
+const sfWorker = new Worker('./engine/stockfish-18-lite-single.js');
+let sfReady = new Promise(res=>{
+  const onMsg = e=>{
+    if(e.data==='uciok'){ sfWorker.postMessage('isready'); }
+    else if(e.data==='readyok'){ sfWorker.removeEventListener('message', onMsg); res(); }
+  };
+  sfWorker.addEventListener('message', onMsg);
+  sfWorker.postMessage('uci');
+});
+
+let latestFen = null;
+let evalQueueTail = Promise.resolve();
+
+function evalPositionRaw(fen, d){
+  return new Promise(resolve=>{
+    let lastScore = null;
+    const onMsg = e=>{
+      const line = e.data;
+      if(typeof line !== 'string') return;
+      if(line.startsWith('info') && line.includes(' score ')){
+        const cpM = line.match(/score cp (-?\d+)/);
+        const mateM = line.match(/score mate (-?\d+)/);
+        if(mateM) lastScore = {mate:+mateM[1]};
+        else if(cpM) lastScore = {cp:+cpM[1]};
+      } else if(line.startsWith('bestmove')){
+        sfWorker.removeEventListener('message', onMsg);
+        resolve(lastScore || {cp:0});
+      }
+    };
+    sfWorker.addEventListener('message', onMsg);
+    sfWorker.postMessage('position fen '+fen);
+    sfWorker.postMessage('go depth '+d);
+  });
+}
+
+function scheduleEval(){
+  const fen = chess.fen();
+  const d = depth;
+  latestFen = fen;
+  const thinking = document.getElementById('turn-ind');
+  evalQueueTail = evalQueueTail.then(async ()=>{
+    if(fen !== latestFen) return;
+    await sfReady;
+    if(fen !== latestFen) return;
+    const score = await evalPositionRaw(fen, d);
+    if(fen !== latestFen) return;
+    applyEval(score, fen.split(' ')[1]==='w');
+  });
+}
+
+function applyEval(score, whiteToMove){
+  let whitePct, label;
+  if(score.mate != null){
+    const whiteIsMating = whiteToMove ? score.mate>0 : score.mate<0;
+    whitePct = whiteIsMating ? 100 : 0;
+    label = 'M' + Math.abs(score.mate);
+  } else {
+    const cpWhite = whiteToMove ? score.cp : -score.cp;
+    whitePct = 50 + 50 * (2/(1+Math.exp(-0.00368208*cpWhite)) - 1);
+    label = (cpWhite>=0?'+':'') + (cpWhite/100).toFixed(1);
+  }
+  const fill = document.getElementById('eval-fill');
+  const lbl = document.getElementById('eval-label');
+  fill.style.height = whitePct + '%';
+  lbl.textContent = label;
+  lbl.classList.toggle('top', whitePct < 50);
+  lbl.style.color = whitePct < 50 ? '#eee' : '#333';
+}
+
+renderAll();
+scheduleEval();
+</script>
+</body>
+</html>
