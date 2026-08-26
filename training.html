@@ -21,7 +21,10 @@ main{padding:12px;max-width:520px;margin:0 auto}
 .tierhdr{font-size:12px;color:var(--accent);font-weight:700;margin:0 0 8px}
 .note{font-size:12px;color:var(--muted)}
 
-.room-status{font-size:13px;font-weight:700;margin-bottom:8px}
+.room-status{font-size:15px;font-weight:800;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:var(--panel2)}
+.room-status.mine{background:#e8f5e9;color:#1b5e20}
+.room-status.theirs{background:var(--panel2);color:var(--muted)}
+.room-status.wait{background:#fff4e5;color:#b26a00}
 .share-row{display:flex;gap:6px}
 .share-row input{flex:1;background:#fafafa;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:8px;font-size:12.5px}
 .share-row button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:8px 10px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
@@ -94,7 +97,7 @@ footer a{margin:0 6px}
       <div class="evalbar"><div class="evalbar-fill" id="eval-fill"></div><div class="evalbar-label" id="eval-label">0.0</div></div>
       <div class="chessboard" id="board"></div>
     </div>
-    <div class="turn-indicator" id="turn-ind">Weiß am Zug</div>
+    <div class="note" id="best-move" style="text-align:center;margin-top:8px;font-weight:700;color:var(--accent);min-height:16px"></div>
     <div class="btnrow">
       <button class="btn sec" id="btn-undo">↩️ Zug zurück</button>
       <button class="btn sec" id="btn-flip">🔄 Brett drehen</button>
@@ -188,7 +191,9 @@ async function bootstrapRoom(){
     await setDoc(roomRef, {moves:[], white:null, black:null, createdAt: Date.now()});
   }
   let claiming = false;
+  let snapSeq = 0;
   onSnapshot(roomRef, async snap => {
+    const mySeq = ++snapSeq;
     if(!snap.exists()){
       document.getElementById('main-wrap').innerHTML = '<div class="card"><div class="err-box">Dieser Raum existiert nicht (mehr). Prüfe den Link oder <a href="./training.html">starte einen neuen</a>.</div></div>';
       return;
@@ -204,6 +209,9 @@ async function bootstrapRoom(){
       orientation = myColor==='b' ? 'black' : 'white';
       claiming = false;
     }
+    /* Falls während des Claimings (await oben) bereits ein neuerer Snapshot reingekommen
+       und gerendert wurde, diesen hier veralteten Stand nicht mehr drüberrendern. */
+    if(mySeq !== snapSeq) return;
     currentMoves = data.moves || [];
     replayMoves();
     renderRoomStatus(data);
@@ -224,12 +232,35 @@ function replayMoves(){
 
 function renderRoomStatus(data){
   const el = document.getElementById('room-status');
-  if(myColor==='spectator'){ el.textContent = '👀 Zuschauer – der Raum ist bereits mit zwei Spielern voll.'; return; }
+  el.classList.remove('mine','theirs','wait');
+  if(myColor==='spectator'){
+    el.classList.add('theirs');
+    el.textContent = '👀 Zuschauer – der Raum ist bereits mit zwei Spielern voll.';
+    return;
+  }
   const mine = myColor==='w' ? 'Weiß ♔' : 'Schwarz ♚';
-  const waiting = (myColor==='w' && !data.black) || (myColor==='b' && !data.white);
-  el.textContent = waiting
-    ? `Du spielst ${mine}. Warte auf deinen Freund – Link oben teilen!`
-    : `Du spielst ${mine}.`;
+  const waitingForOpponent = (myColor==='w' && !data.black) || (myColor==='b' && !data.white);
+  if(waitingForOpponent){
+    el.classList.add('wait');
+    el.textContent = `Du spielst ${mine}. Warte auf deinen Freund – Link oben teilen!`;
+    return;
+  }
+  if(chess.isCheckmate()){
+    const winnerIsMe = chess.turn() !== myColor;
+    el.classList.add(winnerIsMe ? 'mine' : 'theirs');
+    el.textContent = winnerIsMe ? `🏆 Matt – du gewinnst!` : `🏆 Matt – dein Freund gewinnt.`;
+    return;
+  }
+  if(chess.isDraw()){
+    el.classList.add('theirs');
+    el.textContent = '🤝 Remis.';
+    return;
+  }
+  const myTurn = chess.turn() === myColor;
+  el.classList.add(myTurn ? 'mine' : 'theirs');
+  el.textContent = myTurn
+    ? `🟢 Du bist dran (${mine})${chess.isCheck()?' – Schach!':''}`
+    : `⏳ Dein Freund ist dran (du spielst ${mine})${chess.isCheck()?' – Schach!':''}`;
 }
 
 bootstrapRoom();
@@ -292,14 +323,6 @@ function renderMoveList(){
 }
 
 function renderStatus(){
-  const el = document.getElementById('turn-ind');
-  if(chess.isCheckmate()){
-    el.textContent = (chess.turn()==='w'?'Schwarz':'Weiß') + ' gewinnt durch Matt';
-  } else if(chess.isDraw()){
-    el.textContent = 'Remis';
-  } else {
-    el.textContent = (chess.turn()==='w'?'Weiß':'Schwarz') + ' am Zug' + (chess.isCheck()?' – Schach!':'');
-  }
   document.getElementById('btn-undo').disabled = currentMoves.length===0;
 }
 
@@ -337,7 +360,9 @@ async function commitMove(moveObj){
   const res = test.move(moveObj);
   if(!res) return;
   selected = null;
-  renderBoard();
+  /* Bewusst kein sofortiges renderBoard() hier: das Brett zeigt erst wieder etwas an,
+     sobald Firestore den Zug bestätigt hat (onSnapshot) - so kann lokaler und
+     entfernter Stand nie auseinanderlaufen. */
   const newMoves = currentMoves.concat([{from:moveObj.from, to:moveObj.to, promotion:moveObj.promotion||''}]);
   await updateDoc(roomRef, {moves: newMoves});
 }
@@ -401,13 +426,25 @@ function evalPositionRaw(fen, d){
         else if(cpM) lastScore = {cp:+cpM[1]};
       } else if(line.startsWith('bestmove')){
         sfWorker.removeEventListener('message', onMsg);
-        resolve(lastScore || {cp:0});
+        const bmM = line.match(/^bestmove (\S+)/);
+        resolve({score: lastScore || {cp:0}, bestmoveUci: bmM ? bmM[1] : null});
       }
     };
     sfWorker.addEventListener('message', onMsg);
     sfWorker.postMessage('position fen '+fen);
     sfWorker.postMessage('go depth '+d);
   });
+}
+
+function uciToSan(fen, uci){
+  if(!uci || uci.length<4 || uci==='(none)') return null;
+  const from = uci.slice(0,2), to = uci.slice(2,4);
+  const promotion = uci.length>4 ? uci[4] : undefined;
+  try{
+    const c = new Chess(fen);
+    const res = c.move(promotion ? {from,to,promotion} : {from,to});
+    return res ? res.san : null;
+  }catch(e){ return null; }
 }
 
 function scheduleEval(){
@@ -418,9 +455,14 @@ function scheduleEval(){
     if(fen !== latestFen) return;
     await sfReady;
     if(fen !== latestFen) return;
-    const score = await evalPositionRaw(fen, d);
+    const {score, bestmoveUci} = await evalPositionRaw(fen, d);
     if(fen !== latestFen) return;
     applyEval(score, fen.split(' ')[1]==='w');
+    const bestEl = document.getElementById('best-move');
+    if(bestEl){
+      const san = chess.isGameOver() ? null : uciToSan(fen, bestmoveUci);
+      bestEl.textContent = san ? `💡 Bester Zug: ${san}` : '';
+    }
   });
 }
 
