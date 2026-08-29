@@ -558,9 +558,14 @@ async function verifyChessGame(u){
       }
       return {ok:false, msg:'Partie mit dieser ID existiert nicht auf lichess.org'};
     }
+    /* Chess.com blockt direkte Browser-Anfragen (CORS), daher nur über einen öffentlichen
+       Proxy erreichbar, der wiederholt unzuverlässig war (down, Rate-Limit, oder ein
+       Antwortformat ohne "game"/"players", obwohl die Partie echt existiert). Eine falsche
+       Ablehnung ist hier schlimmer als eine verpasste Tippfehler-Erkennung, darum blockiert
+       diese Prüfung für chess.com-Links nie mehr die Meldung selbst — nur ein echter,
+       eindeutiger Treffer zählt als "verifiziert", alles andere lässt die Meldung offen durch. */
     const proxy = 'https://corsproxy.io/?';
     const types = info.type ? [info.type] : ['live','daily'];
-    let confirmedMissing = false;
     for(const t of types){
       const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${info.id}`);
       try{
@@ -568,14 +573,10 @@ async function verifyChessGame(u){
         if(r.ok){
           const data = await r.json();
           if(data && (data.game || data.players)) return {ok:true, data};
-          /* chess.com hat gültig geantwortet, aber ohne Partiedaten -> Partie existiert vermutlich wirklich nicht */
-          confirmedMissing = true;
         }
-        /* r nicht ok (z.B. Proxy down/blockiert/Rate-Limit) ist KEIN Beweis, dass die Partie nicht existiert */
-      }catch(e){ /* Netzwerk-/Proxy-Fehler für diesen Typ, nächsten versuchen bzw. unten offen fehlschlagen */ }
+      }catch(e){ /* Proxy-/Netzwerkfehler für diesen Typ, nächsten versuchen bzw. unten offen fehlschlagen */ }
     }
-    if(confirmedMissing) return {ok:false, msg:'Partie mit dieser ID existiert nicht auf chess.com'};
-    return {ok:true, msg:'Format OK (API-Prüfung nicht möglich)'};
+    return {ok:true, msg:'Format OK (chess.com-Prüfung nicht möglich)'};
   }catch(e){
     return {ok:true, msg:'Format OK (API-Prüfung nicht möglich)'};
   }
