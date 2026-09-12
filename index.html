@@ -80,57 +80,6 @@ details summary::marker{display:none;content:""}
 .subpanel.on{display:block}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 12px 40px}
 
-.ana-link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:11px;cursor:pointer;font:inherit}
-.ana-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:flex-end;justify-content:center}
-.ana-overlay.on{display:flex}
-.ana-modal{background:var(--panel);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:16px}
-@media (min-width:600px){.ana-modal{border-radius:14px;margin-bottom:6vh}}
-.ana-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.ana-head b{font-size:15px}
-.ana-close{background:var(--panel2);border:0;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;color:var(--muted)}
-.ana-depth{margin-bottom:12px;padding:9px 11px;background:var(--panel2);border-radius:8px}
-.ana-depth label{margin:0 0 4px;font-size:12px;color:var(--muted)}
-.ana-depth label b{color:var(--txt);font-variant-numeric:tabular-nums}
-.ana-depth input[type=range]{width:100%;accent-color:var(--accent);padding:0;background:none}
-.ana-depth-hint{font-size:10.5px;color:var(--muted);margin-top:2px}
-.ana-players{display:flex;gap:8px;margin-bottom:10px}
-.ana-players .p{flex:1;background:var(--panel2);border-radius:8px;padding:9px 10px;min-width:0}
-.ana-players .p .u{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ana-players .p .acc{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;margin:3px 0 1px}
-.ana-players .p .elo{font-size:11px;color:var(--muted)}
-.ana-chart{width:100%;height:90px;border-radius:8px;overflow:hidden;margin-bottom:10px;display:block;background:var(--white)}
-.ana-status{font-size:12.5px;color:var(--muted);text-align:center;padding:26px 0}
-.ana-progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin:12px auto 0;max-width:220px}
-.ana-progress>div{height:100%;background:var(--accent);width:0%;transition:width .15s}
-.ana-note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
-.ana-err{padding:14px;background:#ffe8e8;color:#c00;border-radius:8px;font-size:13px;line-height:1.5}
-
-.chessboard{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid var(--line)}
-.chessboard .sq{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;min-width:0;min-height:0}
-.chessboard .sq.l{background:#f0d9b5}
-.chessboard .sq.d{background:#b58863}
-.chessboard .sq img{width:82%;height:82%;object-fit:contain;pointer-events:none}
-.mv-icon{position:absolute;top:-6%;right:-6%;width:42%;height:42%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:min(3.6vw,15px);font-weight:800;line-height:1;box-shadow:0 0 0 2px var(--panel);pointer-events:none}
-.rv-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-.rv-nav .cur{font-size:12.5px;color:var(--muted);text-align:center;flex:1}
-.rv-nav button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-weight:700;cursor:pointer}
-.rv-nav button:disabled{opacity:.4;cursor:not-allowed}
-.mv-list{max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
-.mv-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
-.mv-row:last-child{border-bottom:0}
-.mv-row.active{background:var(--panel2)}
-.mv-row .no{color:var(--muted);width:34px;flex:none;font-variant-numeric:tabular-nums}
-.mv-row .san{font-weight:700;flex:1}
-.mv-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
-.mv-badge.brilliant{color:#00838f;background:#e0f7fa}
-.mv-badge.book{color:#6a4fb0;background:#ede7f6}
-.mv-badge.best{color:#1565c0;background:#e3f2fd}
-.mv-badge.excellent{color:#00796b;background:#e0f2f1}
-.mv-badge.good{color:#2e7d32;background:#e8f5e9}
-.mv-badge.inacc{color:#b26a00;background:#fff4e5}
-.mv-badge.mistake{color:#e65100;background:#ffe0b2}
-.mv-badge.blunder{color:#c00;background:#ffe8e8}
-
 .sim-match{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0}
 .sim-match .vs{font-size:13px;font-weight:600;margin-bottom:6px}
 .sim-opts{display:flex;gap:6px}
@@ -150,7 +99,6 @@ tr.sim-q td{background:#fff4e0}
 <nav>
   <button data-tab="tabelle" class="on">Tabelle</button>
   <button data-tab="plan">Spielplan</button>
-  <button data-tab="melden">Melden</button>
   <button data-tab="bericht">Bericht</button>
   <button data-tab="regeln">Mehr</button>
 </nav>
@@ -184,37 +132,6 @@ tr.sim-q td{background:#fff4e0}
     <div id="schedule"></div>
     <h2>Halbfinale &amp; Finale</h2>
     <div id="playoffs"></div>
-  </section>
-
-  <section id="tab-melden">
-    <h2>Ergebnis melden</h2>
-    <div class="card">
-      <div class="note">Trage hier die Partie ein. Bei "Gegner nicht erschienen" kein Link nötig. Link wird auf chess.com oder lichess.org geprüft. Zum Korrigieren einfach neu melden — überschreibt das alte Ergebnis nach Bestätigung. <b>Kampfloses Remis</b> (Ergebnis "Remis" bei "Gegner nicht erschienen") gibt <b>0:0 Brettpunkte</b> für beide Seiten.</div>
-      <label>Runde</label><select id="f-round"></select>
-      <label>Begegnung</label><select id="f-match"></select>
-      <div id="f-leg-wrap" style="display:none">
-        <label>Etappe</label><select id="f-leg"></select>
-      </div>
-      <label>Brett</label><select id="f-board"></select>
-      <div id="f-armcolor-wrap" style="display:none">
-        <label>Farbe (Armageddon)</label>
-        <select id="f-armcolor">
-          <option value="p0">Zuerst genanntes Team spielt Weiß</option>
-          <option value="p1">Zweites Team spielt Weiß</option>
-        </select>
-      </div>
-      <label>Ergebnis</label><select id="f-res"></select>
-      <label>Partie-Status</label>
-      <select id="f-type" onchange="document.getElementById('url-wrap').style.display=this.value==='dnf'?'none':'block'">
-        <option value="played">Gespielt (Link erforderlich)</option>
-        <option value="dnf">Gegner nicht erschienen (Kampflos)</option>
-      </select>
-      <div id="url-wrap">
-        <label>Link zur Partie</label><input id="f-url" placeholder="chess.com/live/game/... oder lichess.org/...">
-      </div>
-      <div class="btnrow"><button class="btn" id="f-send">Ergebnis absenden</button></div>
-      <div id="f-msg"></div>
-    </div>
   </section>
 
   <section id="tab-bericht">
@@ -328,41 +245,14 @@ tr.sim-q td{background:#fff4e0}
   </section>
 </main>
 
-<div class="ana-overlay" id="ana-overlay" onclick="if(event.target===this) closeAnalysis()">
-  <div class="ana-modal">
-    <div class="ana-head">
-      <b id="ana-title">Partie-Analyse</b>
-      <button class="ana-close" onclick="closeAnalysis()">✕</button>
-    </div>
-    <div class="ana-depth">
-      <label for="ana-depth-slider">Engine-Tiefe: <b id="ana-depth-val">12</b></label>
-      <input type="range" id="ana-depth-slider" min="10" max="25" step="1" value="12" oninput="setAnalysisDepth(this.value)">
-      <div class="ana-depth-hint">Höher = genauer, aber deutlich langsamer. Gilt für die nächste Analyse.</div>
-    </div>
-    <div id="ana-body"></div>
-  </div>
-</div>
-
-<footer>Ergebnisse werden live über Firebase synchronisiert. · <a href="./training.html">♟️ Eröffnungstraining</a></footer>
+<footer>Archivierter Endstand des Turniers · nicht mehr live verbunden.</footer>
 
 <script type="module">
 "use strict";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteField, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import { Chess } from "./engine/chess.esm.js";
-
-const firebaseConfig = {
-  projectId: "strategic-bus-gtgzl",
-  appId: "1:223160037293:web:05722321bf1f676a477b24",
-  apiKey: "AIzaSyAnnacfE_oBHBFAVytJfB2jjYyg883PpZ0",
-  authDomain: "strategic-bus-gtgzl.firebaseapp.com",
-  storageBucket: "strategic-bus-gtgzl.firebasestorage.app",
-  messagingSenderId: "223160037293"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app, "ai-studio-ae9706c1-9a01-400b-b585-6db71a52287f");
+/* Diese Seite ist ein statischer Archiv-Schnappschuss des abgeschlossenen Turnierstands.
+   Es gibt keine Server-/Datenbank-Anbindung mehr — alle Ergebnisse unten sind fest
+   eingebettet und ändern sich nicht mehr automatisch. */
 
 /* ---------- Stammdaten ---------- */
 const TEAMS = [
@@ -398,100 +288,117 @@ const PLAYOFF_STAGES = [
 ];
 const PLAYOFF_STAGE = Object.fromEntries(PLAYOFF_STAGES.map(s=>[s.id,s]));
 
-const KEY = 'schachturnier_v1';
+/* ---------- Eingefrorener Turnierstand (kein Server-Zugriff mehr) ---------- */
+const FROZEN_PLAYERS = {
+  ant: ["", "", ""],
+  bar: ["", "", ""],
+  chn: ["", "", ""],
+  gat: ["", "", ""],
+  nor: ["", "", ""],
+  prk: ["", "", ""],
+  uzb: ["", "", ""],
+  vat: ["", "", ""],
+};
+const FROZEN_GAMES = {
+  R1M0B1: {res:"1", url:"https://www.chess.com/live/game/172239554614"},
+  R1M0B2: {res:"1", url:"https://www.chess.com/live/game/172305556016"},
+  R1M0B3: {res:"0", dnf:false, url:"https://www.chess.com/live/game/172239922022"},
+  R1M1B1: {res:"=", url:"https://www.chess.com/live/game/172288650566"},
+  R1M1B2: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172256087850"},
+  R1M1B3: {res:"1", url:"https://www.chess.com/live/game/172285790344"},
+  R1M2B1: {res:"0", dnf:true, url:""},
+  R1M2B2: {res:"=", dnf:true, url:""},
+  R1M2B3: {res:"0", url:"https://www.chess.com/live/game/172307308238"},
+  R1M3B1: {res:"1", url:"https://www.chess.com/game/live/172284375300"},
+  R1M3B2: {res:"1", url:"https://www.chess.com/live/game/172240531482"},
+  R1M3B3: {res:"0", url:"https://lichess.org/uTVHc7t8"},
+  R2M0B1: {res:"1", dnf:false, url:"https://www.chess.com/game/live/172463003694"},
+  R2M0B2: {res:"0", dnf:true, url:""},
+  R2M0B3: {res:"1", dnf:false, url:"https://www.chess.com/game/live/172437881886"},
+  R2M1B1: {res:"=", dnf:false, url:"https://www.chess.com/game/172514355676"},
+  R2M1B2: {res:"0", dnf:true, url:""},
+  R2M1B3: {res:"1", dnf:false, url:"https://lichess.org/TKqlBG4v/black"},
+  R2M2B1: {res:"1", dnf:true, url:""},
+  R2M2B2: {res:"1", dnf:false, url:"https://www.chess.com/game/live/172471364144"},
+  R2M2B3: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172432358702"},
+  R2M3B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172513607740"},
+  R2M3B2: {res:"1", dnf:false, url:"https://www.chess.com/game/live/172482722162"},
+  R2M3B3: {res:"1", dnf:false, url:"https://www.chess.com/game/172476385732"},
+  R3M0B1: {res:"1", dnf:false, url:"https://www.chess.com/game/live/172761045850"},
+  R3M0B2: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172761957200"},
+  R3M0B3: {res:"0", dnf:true, url:""},
+  R3M1B1: {res:"0", dnf:true, url:""},
+  R3M1B2: {res:"0", dnf:false, url:"https://www.chess.com/game/172690558954"},
+  R3M1B3: {res:"=", dnf:true, url:""},
+  R3M2B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172744461566"},
+  R3M2B2: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172701944198"},
+  R3M2B3: {res:"0", dnf:false, url:"https://lichess.org/LGrqkD9C/black"},
+  R3M3B1: {res:"0", dnf:false, url:"https://www.chess.com/game/live/172714223644"},
+  R3M3B2: {res:"=", dnf:true, url:""},
+  R3M3B3: {res:"0", dnf:false, url:"https://lichess.org/rY4z2AhP/black"},
+  R4M0B1: {res:"1", dnf:false, url:"https://www.chess.com/game/172986069880"},
+  R4M0B2: {res:"0", dnf:false, url:"https://lichess.org/Pe2lgAox/white"},
+  R4M0B3: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172978767686"},
+  R4M1B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172927738426"},
+  R4M1B2: {res:"=", dnf:true, url:""},
+  R4M1B3: {res:"0", dnf:false, url:"https://lichess.org/BDhdn9U1/white"},
+  R4M2B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/172978664606"},
+  R4M2B2: {res:"=", dnf:false, url:"https://www.chess.com/game/live/172998178182"},
+  R4M2B3: {res:"1", dnf:false, url:"https://lichess.org/WMuDoXSi/black"},
+  R4M3B1: {res:"1", dnf:true, url:""},
+  R4M3B2: {res:"1", dnf:true, url:""},
+  R4M3B3: {res:"=", dnf:true, url:""},
+  R5M0B1: {res:"0", dnf:true, url:""},
+  R5M0B2: {res:"0", dnf:true, url:""},
+  R5M0B3: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173228035576"},
+  R5M1B1: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173231670586"},
+  R5M1B2: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173261640584"},
+  R5M1B3: {res:"1", dnf:false, url:"https://lichess.org/jmUgUPSN/black#0"},
+  R5M2B1: {res:"0", dnf:true, url:""},
+  R5M2B2: {res:"0", dnf:true, url:""},
+  R5M2B3: {res:"1", dnf:false, url:"https://lichess.org/C7OpfDgR/black"},
+  R5M3B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173211461742"},
+  R5M3B2: {res:"0", dnf:true, url:""},
+  R5M3B3: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173221818882"},
+  R6M0B1: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173470563646"},
+  R6M0B2: {res:"1", dnf:true, url:""},
+  R6M0B3: {res:"=", dnf:true, url:""},
+  R6M1B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173455271128"},
+  R6M1B2: {res:"1", dnf:true, url:""},
+  R6M1B3: {res:"1", dnf:true, url:""},
+  R6M2B1: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173357390188"},
+  R6M2B2: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173377111020"},
+  R6M2B3: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173353765254"},
+  R6M3B1: {res:"0", dnf:true, url:""},
+  R6M3B2: {res:"0", dnf:true, url:""},
+  R6M3B3: {res:"0", dnf:false, url:"https://lichess.org/T0v97wQK"},
+  R7M0B1: {res:"0", dnf:false, url:"https://www.chess.com/game/live/173709938226"},
+  R7M0B2: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173665928562"},
+  R7M0B3: {res:"1", dnf:false, url:"https://lichess.org/OXlufgiW"},
+  R7M1B1: {res:"=", dnf:true, url:""},
+  R7M1B2: {res:"=", dnf:true, url:""},
+  R7M1B3: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173605853890"},
+  R7M2B1: {res:"=", dnf:true, url:""},
+  R7M2B2: {res:"0", dnf:true, url:""},
+  R7M2B3: {res:"=", dnf:true, url:""},
+  R7M3B1: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173598290426"},
+  R7M3B2: {res:"=", dnf:false, url:"https://www.chess.com/live/game/173699576080"},
+  R7M3B3: {res:"0", dnf:true, url:""},
+  SFM0L1B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173920626068"},
+  SFM0L1B3: {res:"0", dnf:false, url:"https://www.chess.com/live/game/174143499796"},
+  SFM0L2B1: {res:"1", dnf:false, url:"https://www.chess.com/live/game/173920133532"},
+  SFM0L2B3: {res:"0", dnf:false, url:"https://www.chess.com/live/game/174189780412"},
+  SFM1L1B1: {res:"0", dnf:false, url:"https://www.chess.com/live/game/173903365462"},
+  SFM1L1B3: {res:"1", dnf:false, url:"https://lichess.org/DfCFwzLv/black"},
+  SFM1L2B3: {res:"1", dnf:false, url:"https://lichess.org/VYc4euq9"},
+};
 
 /* ---------- State ---------- */
-let S = blank();
-let bgAnalyzeScheduled = false;
-
-function blank(){
-  const players = {};
-  TEAMS.forEach(t=>players[t.id]=['','','']);
-  return {players, games:{}};
-}
-
-const docRef = doc(db, "tournament", "state");
-onSnapshot(docRef, (docSnap) => {
-  let fbData = docSnap.exists() ? docSnap.data() : null;
-  let hasLocalData = false;
-
-  try {
-    const rawLocal = localStorage.getItem(KEY);
-    if (rawLocal) {
-      const localData = JSON.parse(rawLocal);
-      if (!fbData) fbData = blank();
-      fbData.players = Object.assign(fbData.players || {}, localData.players || {});
-      fbData.games = Object.assign(fbData.games || {}, localData.games || {});
-      hasLocalData = true;
-      localStorage.removeItem(KEY);
-      console.log("Lokale Daten zu Firebase migriert.");
-    }
-  } catch (e) {
-    console.error("Fehler bei der Migration lokaler Daten:", e);
-  }
-
-  if (fbData) {
-    const b = blank();
-    S = {players:Object.assign(b.players,fbData.players||{}), games:fbData.games||{}};
-  } else {
-    S = blank();
-  }
-  
-  renderAll();
-
-  if (!bgAnalyzeScheduled) {
-    bgAnalyzeScheduled = true;
-    setTimeout(() => backgroundPreAnalyze(), 4000);
-  }
-
-  if (hasLocalData) {
-    setDoc(docRef, S, {merge:true}).catch(error => console.error("Firebase Migration Error:", error));
-  }
-}, (error) => {
-  console.error("Firebase Snapshot Error:", error);
-  const errBox = document.createElement('div');
-  errBox.style = "background:#ffe8e8;color:#c00;padding:15px;margin:10px;border-radius:8px;font-weight:bold;";
-  errBox.innerHTML = `⚠️ Firebase Ladefehler: ${error.message}`;
-  document.body.prepend(errBox);
-});
-
-function updateGameInFirebase(k, data) {
-  if (data === null) {
-    updateDoc(docRef, { [`games.${k}`]: deleteField() }).catch(error => {
-      console.error("Firebase Delete Error:", error);
-      alert("Fehler beim Löschen: " + error.message);
-    });
-  } else {
-    updateDoc(docRef, { [`games.${k}`]: data }).catch(error => {
-      // Wenn das Dokument noch gar nicht existiert, setDoc als fallback
-      if (error.code === 'not-found') {
-        setDoc(docRef, { games: { [k]: data } }, { merge: true });
-      } else {
-        console.error("Firebase Update Error:", error);
-        alert("Fehler beim Speichern: " + error.message);
-      }
-    });
-  }
-}
+let S = {players: FROZEN_PLAYERS, games: FROZEN_GAMES};
 
 /* ---------- Helfer ---------- */
 const gkey = (r,m,b)=>'R'+r+'M'+m+'B'+b;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-function getCurrentRound(){
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  for(let i=0; i<ROUNDS.length; i++){
-    const [startStr, endStr] = ROUNDS[i].date.split('–');
-    const [sd, sm] = startStr.trim().split('.');
-    const [ed, em] = endStr.trim().split('.');
-    const startDate = new Date(2026, parseInt(sm)-1, parseInt(sd));
-    const endDate = new Date(2026, parseInt(em)-1, parseInt(ed));
-    endDate.setHours(23,59,59,999);
-    if(today >= startDate && today <= endDate) return ROUNDS[i].nr;
-  }
-  return ROUNDS[0].nr;
-}
 
 /* Heim (erstgenannt): Brett 1+3 Schwarz, Brett 2 Weiß */
 const homeIsWhite = b => b===2;
@@ -511,14 +418,6 @@ function gamePts(g){
   if(!g) return null;
   if(g.dnf && g.res==='=') return [0,0];
   return pts(g.res);
-}
-function extractGameId(u){
-  try{
-    const x=new URL(u);
-    if(!x.hostname.includes('chess.com')) return null;
-    const m = x.pathname.match(/(?:live|daily)\/game\/(\d+)|game\/(?:live|daily)\/(\d+)/);
-    return m ? (m[1]||m[2]) : null;
-  }catch(e){ return null; }
 }
 function extractGameInfo(u){
   try{
@@ -546,496 +445,10 @@ function extractGameInfo(u){
 function validUrl(u){
   return extractGameInfo(u) !== null;
 }
-async function verifyChessGame(u){
-  const info = extractGameInfo(u);
-  if(!info) return {ok:false, msg:'Ungültiges URL-Format (chess.com oder lichess.org)'};
-  try{
-    if(info.source === 'lichess.org'){
-      const r = await fetch(`https://lichess.org/api/game/${info.id}`, {cache:'no-store', headers:{'Accept':'application/json'}});
-      if(r.ok){
-        const data = await r.json();
-        if(data && data.id) return {ok:true, data};
-      }
-      return {ok:false, msg:'Partie mit dieser ID existiert nicht auf lichess.org'};
-    }
-    /* Chess.com blockt direkte Browser-Anfragen (CORS), daher nur über einen öffentlichen
-       Proxy erreichbar, der wiederholt unzuverlässig war (down, Rate-Limit, oder ein
-       Antwortformat ohne "game"/"players", obwohl die Partie echt existiert). Eine falsche
-       Ablehnung ist hier schlimmer als eine verpasste Tippfehler-Erkennung, darum blockiert
-       diese Prüfung für chess.com-Links nie mehr die Meldung selbst — nur ein echter,
-       eindeutiger Treffer zählt als "verifiziert", alles andere lässt die Meldung offen durch. */
-    const proxy = 'https://corsproxy.io/?';
-    const types = info.type ? [info.type] : ['live','daily'];
-    for(const t of types){
-      const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${info.id}`);
-      try{
-        const r = await fetch(proxy+target, {cache:'no-store'});
-        if(r.ok){
-          const data = await r.json();
-          if(data && (data.game || data.players)) return {ok:true, data};
-        }
-      }catch(e){ /* Proxy-/Netzwerkfehler für diesen Typ, nächsten versuchen bzw. unten offen fehlschlagen */ }
-    }
-    return {ok:true, msg:'Format OK (chess.com-Prüfung nicht möglich)'};
-  }catch(e){
-    return {ok:true, msg:'Format OK (API-Prüfung nicht möglich)'};
-  }
-}
-
-/* ---------- Partie-Analyse (Stockfish lokal im Browser) ---------- */
-let ANALYSIS_DEPTH = Math.min(25, Math.max(10, parseInt(localStorage.getItem('sf_depth')) || 12));
-function setAnalysisDepth(v){
-  ANALYSIS_DEPTH = Math.min(25, Math.max(10, +v));
-  localStorage.setItem('sf_depth', ANALYSIS_DEPTH);
-  document.getElementById('ana-depth-val').textContent = ANALYSIS_DEPTH;
-}
-window.setAnalysisDepth = setAnalysisDepth;
-
-let sfWorker = null, sfReady = null;
-
-function getEngine(){
-  if(!sfWorker){
-    sfWorker = new Worker('./engine/stockfish-18-lite-single.js');
-    sfReady = new Promise(res=>{
-      const onMsg = e=>{ if(e.data==='uciok'){ sfWorker.postMessage('isready'); } else if(e.data==='readyok'){ sfWorker.removeEventListener('message', onMsg); res(); } };
-      sfWorker.addEventListener('message', onMsg);
-      sfWorker.postMessage('uci');
-    });
-  }
-  return sfReady;
-}
-
-function evalFen(fen){
-  return new Promise((resolve,reject)=>{
-    let lastScore = null;
-    const onMsg = e=>{
-      const line = e.data;
-      if(typeof line !== 'string') return;
-      if(line.startsWith('info') && line.includes(' score ')){
-        const cpM = line.match(/score cp (-?\d+)/);
-        const mateM = line.match(/score mate (-?\d+)/);
-        if(mateM) lastScore = {mate:+mateM[1]};
-        else if(cpM) lastScore = {cp:+cpM[1]};
-      } else if(line.startsWith('bestmove')){
-        sfWorker.removeEventListener('message', onMsg);
-        const bmM = line.match(/^bestmove (\S+)/);
-        resolve({score: lastScore || {cp:0}, bestmove: bmM ? bmM[1] : null});
-      }
-    };
-    sfWorker.addEventListener('message', onMsg);
-    sfWorker.postMessage('position fen '+fen);
-    sfWorker.postMessage('go depth '+ANALYSIS_DEPTH);
-  });
-}
-
-function whiteWinPercent(score, whiteToMove){
-  if(score.mate != null){
-    const whiteIsMating = whiteToMove ? score.mate>0 : score.mate<0;
-    return whiteIsMating ? 100 : 0;
-  }
-  const cpWhite = whiteToMove ? score.cp : -score.cp;
-  return 50 + 50 * (2/(1+Math.exp(-0.00368208*cpWhite)) - 1);
-}
-function moverWinPercent(whiteWP, whiteIsMover){ return whiteIsMover ? whiteWP : 100-whiteWP; }
-function accuracyFromLoss(loss){
-  const a = 103.1668 * Math.exp(-0.04354*Math.max(0,loss)) - 3.1669;
-  return Math.max(0, Math.min(100, a));
-}
-function roughElo(acc){
-  if(acc>=98) return '> 2500';
-  if(acc>=94) return '~2100–2500';
-  if(acc>=88) return '~1800–2100';
-  if(acc>=80) return '~1500–1800';
-  if(acc>=70) return '~1200–1500';
-  if(acc>=58) return '~900–1200';
-  if(acc>=40) return '~600–900';
-  return '< 600';
-}
-/* Echte Wertung (falls in den Partie-Daten vorhanden) statt grober Schätzung aus der Genauigkeit */
-function eloDisplay(realRating, acc){
-  if(realRating) return {text: realRating+'', real:true};
-  if(acc!=null) return {text: roughElo(acc)+' (geschätzt)', real:false};
-  return {text:'–', real:false};
-}
-
-/* Elo/Wertung isoliert extrahieren - eigene Funktion, damit Analyse und ggf. andere Stellen sie teilen */
-function extractLichessRatings(pgn){
-  const weM = pgn.match(/\[WhiteElo "(\d+)"\]/), beM = pgn.match(/\[BlackElo "(\d+)"\]/);
-  return (weM||beM) ? {white: weM?+weM[1]:null, black: beM?+beM[1]:null} : null;
-}
-function extractChesscomRatings(entry){
-  return (entry.white || entry.black) ? {white: entry.white?.rating||null, black: entry.black?.rating||null} : null;
-}
-
-async function fetchLichessPgn(id){
-  const r = await fetch(`https://lichess.org/game/export/${id}?literate=false`, {cache:'no-store', headers:{'Accept':'application/x-chess-pgn'}});
-  if(!r.ok) throw new Error('lichess.org: Partie nicht gefunden (HTTP '+r.status+')');
-  const pgn = await r.text();
-  if(!pgn.includes('[White')) throw new Error('lichess.org: Partie enthält keine Zugdaten');
-  const ratings = extractLichessRatings(pgn);
-  return {pgn, accuracies:null, ratings};
-}
-
-async function fetchJsonWithFallback(url){
-  const proxy = 'https://corsproxy.io/?';
-  try{
-    const r = await fetch(url, {cache:'no-store'});
-    if(r.ok) return await r.json();
-  }catch(e){}
-  const r2 = await fetch(proxy+encodeURIComponent(url), {cache:'no-store'});
-  if(!r2.ok) throw new Error('HTTP '+r2.status);
-  return await r2.json();
-}
-
-async function fetchChesscomPgn(id, type, roundNr){
-  const proxy = 'https://corsproxy.io/?';
-  let headers = null;
-  for(const t of (type?[type]:['live','daily'])){
-    try{
-      const target = encodeURIComponent(`https://www.chess.com/callback/${t}/game/${id}`);
-      const r = await fetch(proxy+target, {cache:'no-store'});
-      if(r.ok){
-        const data = await r.json();
-        if(data?.game?.pgnHeaders?.White){ headers = data.game.pgnHeaders; break; }
-      }
-    }catch(e){}
-  }
-  if(!headers) throw new Error('chess.com: Spielerdaten dieser Partie nicht abrufbar.');
-  const username = headers.White;
-  const round = ROUNDS.find(x=>x.nr===roundNr);
-  const mMatch = round && round.date.match(/^(\d{2})\.(\d{2})\./);
-  const month = mMatch ? mMatch[2] : '08';
-  const archiveUrl = `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/2026/${month}`;
-  const archive = await fetchJsonWithFallback(archiveUrl);
-  const games = archive?.games || [];
-  const entry = games.find(g => g.url && g.url.includes(id));
-  if(!entry || !entry.pgn) throw new Error('chess.com: Partie im offiziellen Archiv von "'+username+'" nicht gefunden (evtl. privates Profil).');
-  const ratings = extractChesscomRatings(entry);
-  return {pgn: entry.pgn, accuracies: entry.accuracies || null, ratings};
-}
-
-function buildEvalChartSvg(whiteWPs){
-  const W = 300, H = 90;
-  const n = whiteWPs.length;
-  if(n < 2) return '';
-  const pt = (i,v) => [ (i/(n-1))*W, H*(1-v/100) ];
-  const pts = whiteWPs.map((v,i)=>pt(i,v));
-  const blackPath = `M0,0 ` + pts.map(p=>`L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ') + ` L${W},0 Z`;
-  const whitePath = `M0,${H} ` + pts.map(p=>`L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ') + ` L${W},${H} Z`;
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%">
-    <path d="${blackPath}" fill="var(--black)"></path>
-    <path d="${whitePath}" fill="var(--white)"></path>
-  </svg>`;
-}
-
-const PIECE_VALUE = {p:1,n:3,b:3,r:5,q:9,k:0};
-const BOOK_PLY_WINDOW = 10; /* erste 5 Vollzüge je Seite */
-const MOVE_ICON = {
-  blunder:   {sym:'??', color:'#fff', bg:'#d32f2f'},
-  mistake:   {sym:'?',  color:'#fff', bg:'#e65100'},
-  inacc:     {sym:'?!', color:'#fff', bg:'#c98a00'},
-  brilliant: {sym:'★',  color:'#fff', bg:'#00838f'},
-  book:      {sym:'📖', color:'#fff', bg:'#6a4fb0'},
-  best:      {sym:'✓',  color:'#fff', bg:'#1565c0'},
-  excellent: {sym:'✓',  color:'#fff', bg:'#00796b'},
-  good:      {sym:'👍', color:'#fff', bg:'#2e7d32'}
-};
-
-function isSacrificeMove(fenAfter, toSquare, moverColor, pieceType){
-  const val = PIECE_VALUE[pieceType] || 0;
-  if(val < 3) return false;
-  try{
-    const board = new Chess(fenAfter);
-    const oppColor = moverColor === 'w' ? 'b' : 'w';
-    const attackers = board.attackers(toSquare, oppColor);
-    if(!attackers || attackers.length === 0) return false;
-    const minAttackerVal = Math.min(...attackers.map(sq => PIECE_VALUE[board.get(sq)?.type] ?? 9));
-    return minAttackerVal <= val;
-  }catch(e){ return false; }
-}
-
-function classifyMove(loss, isBest, plyIndex, opts){
-  opts = opts || {};
-  if(loss>=20) return {cls:'blunder', label:'Patzer ??'};
-  if(loss>=10) return {cls:'mistake', label:'Fehler ?'};
-  if(loss>=5)  return {cls:'inacc', label:'Ungenauigkeit ?!'};
-  const inBook = plyIndex < BOOK_PLY_WINDOW;
-  if(isBest && opts.isSacrifice && !inBook && opts.moverWinBefore>15 && opts.moverWinBefore<85 && opts.moverWinAfter>=55){
-    return {cls:'brilliant', label:'Brillant ★'};
-  }
-  if(inBook) return {cls:'book', label:'Theoriezug'};
-  if(isBest && loss<1) return {cls:'best', label:'Bester Zug'};
-  if(loss<2) return {cls:'excellent', label:'Sehr gut'};
-  return {cls:'good', label:'Gut'};
-}
-function pieceFile(ch){
-  return ch === ch.toUpperCase() ? ch+'-white' : ch+'-black';
-}
-function renderBoardHtml(fen, icon){
-  const ranks = fen.split(' ')[0].split('/');
-  let html = '';
-  for(let r=0;r<8;r++){
-    let f=0;
-    for(const ch of ranks[r]){
-      if(/\d/.test(ch)){
-        for(let k=0;k<+ch;k++){ html += sqHtml(r,f,'',icon); f++; }
-      } else {
-        html += sqHtml(r,f,`<img src="./pieces/${pieceFile(ch)}.svg" alt="${ch}" draggable="false">`, icon); f++;
-      }
-    }
-  }
-  return `<div class="chessboard">${html}</div>`;
-}
-function sqHtml(r,f,inner,icon){
-  const square = 'abcdefgh'[f] + (8-r);
-  const badge = (icon && icon.square === square)
-    ? `<span class="mv-icon" style="color:${icon.color};background:${icon.bg}">${icon.sym}</span>` : '';
-  return `<div class="sq ${(r+f)%2===0?'l':'d'}">${inner}${badge}</div>`;
-}
-
-let currentAnalysis = null;
-
-function renderAnalysisResult(body, data, fromCache){
-  const {whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl, ratings} = data;
-  const eloW = eloDisplay(ratings?.white, accWhite);
-  const eloB = eloDisplay(ratings?.black, accBlack);
-  body.innerHTML = `
-    <div class="ana-chart">${buildEvalChartSvg(whiteWPs)}</div>
-    <div class="ana-players">
-      <div class="p"><div class="u">⚪ ${esc(T[whiteTeam].name)}</div><div class="acc">${accWhite!=null?accWhite.toFixed(1)+'%':'–'}</div><div class="elo">Genauigkeit${eloW.text!=='–'?' · '+(eloW.real?'Wertung ':'Elo ')+eloW.text:''}</div></div>
-      <div class="p"><div class="u">⚫ ${esc(T[blackTeam].name)}</div><div class="acc">${accBlack!=null?accBlack.toFixed(1)+'%':'–'}</div><div class="elo">Genauigkeit${eloB.text!=='–'?' · '+(eloB.real?'Wertung ':'Elo ')+eloB.text:''}</div></div>
-    </div>
-    ${data.moves ? `<div class="btnrow"><button class="btn sec sm" onclick="openMoveReview()">📋 Ganze Partie ansehen (Zug für Zug)</button></div>` : ''}
-    <div class="ana-note">
-      ${fromCache ? '⚡ Aus Cache geladen — bereits einmal analysiert.' : (usedOfficial ? 'Genauigkeit von chess.com übernommen.' : `Schnellanalyse (Tiefe ${ANALYSIS_DEPTH}) mit Stockfish direkt im Browser berechnet.`)}
-      ${(!eloW.real && !eloB.real) ? ' Elo-Werte ohne echte Wertungsdaten sind grobe Schätzungen aus der Genauigkeit, keine offizielle Bewertung.' : ''}
-      <br><a href="${esc(gameUrl)}" target="_blank" rel="noopener">Partie extern ansehen ↗</a>
-    </div>`;
-}
-
-function renderMoveReview(ply){
-  const d = currentAnalysis;
-  if(!d) return;
-  const body = document.getElementById('ana-body');
-  const fen = d.fens[ply];
-  const lastMove = ply>0 ? d.moves[ply-1] : null;
-  const icon = (lastMove && lastMove.to && MOVE_ICON[lastMove.cls]) ? {square: lastMove.to, ...MOVE_ICON[lastMove.cls]} : null;
-  const rows = d.moves.map((mv,i)=>`
-    <div class="mv-row ${i===ply-1?'active':''}" onclick="openMoveReview(${i+1})">
-      <span class="no">${Math.floor(i/2)+1}${i%2===0?'.':'…'}</span>
-      <span class="san">${esc(mv.san)}</span>
-      <span class="mv-badge ${mv.cls}">${mv.label}</span>
-    </div>`).join('');
-  body.innerHTML = `
-    ${renderBoardHtml(fen, icon)}
-    <div class="rv-nav">
-      <button onclick="openMoveReview(${ply-1})" ${ply<=0?'disabled':''}>◀</button>
-      <span class="cur">${ply===0?'Startstellung':(d.moves[ply-1].whiteIsMover?'⚪':'⚫')+' '+esc(d.moves[ply-1].san)}</span>
-      <button onclick="openMoveReview(${ply+1})" ${ply>=d.moves.length?'disabled':''}>▶</button>
-    </div>
-    <div class="mv-list">${rows}</div>
-    <div class="btnrow"><button class="btn sec sm" onclick="backToSummary()">← Zurück zur Übersicht</button></div>
-  `;
-  const activeRow = body.querySelector('.mv-row.active');
-  if(activeRow) activeRow.scrollIntoView({block:'nearest'});
-}
-window.openMoveReview = function(ply){
-  if(!currentAnalysis) return;
-  renderMoveReview(ply==null ? currentAnalysis.moves.length : ply);
-};
-window.backToSummary = function(){
-  if(!currentAnalysis) return;
-  renderAnalysisResult(document.getElementById('ana-body'), currentAnalysis, currentAnalysis.fromCache);
-};
-
 window.switchSub = function(name){
   document.querySelectorAll('.subnav-btn').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
   document.querySelectorAll('.subpanel').forEach(p => p.classList.toggle('on', p.id === 'sub-'+name));
 };
-
-let anaToken = 0;
-/* Kern-Analyse: PGN holen, Engine laufen lassen, Zug-Klassifizierung, Cache schreiben.
-   Läuft sowohl im sichtbaren Analyse-Modal (mit onProgress/isCancelled) als auch
-   unsichtbar im Hintergrund für andere Partien (backgroundPreAnalyze). */
-async function computeGameAnalysis(key, g, rn, opts){
-  opts = opts || {};
-  const onProgress = opts.onProgress || (()=>{});
-  const isCancelled = opts.isCancelled || (()=>false);
-
-  const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
-  const mi = +m[2], b = +m[3];
-  const round = ROUNDS.find(x=>x.nr===rn);
-  const pairing = round.ms[mi];
-  const [home, away] = pairing;
-  const whiteTeam = homeIsWhite(b) ? home : away;
-  const blackTeam = homeIsWhite(b) ? away : home;
-
-  if(!g || !g.url) throw new Error('Kein Partie-Link vorhanden.');
-  const info = extractGameInfo(g.url);
-  if(!info) throw new Error('Ungültiger Partie-Link.');
-
-  const cacheRef = doc(db, 'analysis', key);
-
-  /* Cache: bereits einmal berechnete Analyse wiederverwenden, statt erneut Rechenpower vom Handy zu brauchen */
-  try{
-    const cacheSnap = await getDoc(cacheRef);
-    if(isCancelled()) return null;
-    if(cacheSnap.exists()){
-      const c = cacheSnap.data();
-      if(c.gameUrl === g.url && c.depth === ANALYSIS_DEPTH && Array.isArray(c.whiteWPs) && c.whiteWPs.length > 1 && Array.isArray(c.fens)){
-        return {
-          whiteTeam, blackTeam, whiteWPs: c.whiteWPs, accWhite: c.accWhite, accBlack: c.accBlack,
-          usedOfficial: c.usedOfficial, gameUrl: g.url, ratings: c.ratings||null,
-          fens: c.fens, moves: c.moves||null, fromCache: true
-        };
-      }
-    }
-  }catch(e){ /* Cache nicht lesbar -> normal neu berechnen */ }
-
-  const {pgn, accuracies, ratings} = info.source === 'lichess.org'
-    ? await fetchLichessPgn(info.id)
-    : await fetchChesscomPgn(info.id, info.type, rn);
-  if(isCancelled()) return null;
-
-  const chess = new Chess();
-  chess.loadPgn(pgn);
-  const hist = chess.history({verbose:true});
-  if(hist.length === 0) throw new Error('Partie enthält keine Züge.');
-
-  const replay = new Chess();
-  const fens = [replay.fen()];
-  for(const mv of hist){ replay.move(mv.san); fens.push(replay.fen()); }
-
-  await getEngine();
-  if(isCancelled()) return null;
-
-  /* Stockfish kann eine Matt-/Patt-Stellung nicht bewerten (keine Legalzüge mehr) - Endstellung direkt auswerten */
-  const lastIsCheckmate = replay.isCheckmate();
-  const lastIsGameOver = replay.isGameOver();
-
-  const whiteWPs = [];
-  const bestmoves = [];
-  for(let i=0;i<fens.length;i++){
-    if(isCancelled()) return null;
-    const whiteToMove = i % 2 === 0;
-    if(i === fens.length-1 && lastIsGameOver){
-      whiteWPs.push(lastIsCheckmate ? (whiteToMove ? 0 : 100) : 50);
-      bestmoves.push(null);
-    } else {
-      const {score, bestmove} = await evalFen(fens[i]);
-      whiteWPs.push(whiteWinPercent(score, whiteToMove));
-      bestmoves.push(bestmove);
-    }
-    onProgress((i+1)/fens.length);
-  }
-  if(isCancelled()) return null;
-
-  const accWhiteMoves = [], accBlackMoves = [];
-  const moves = [];
-  for(let i=0;i<fens.length-1;i++){
-    const whiteIsMover = i % 2 === 0;
-    const before = moverWinPercent(whiteWPs[i], whiteIsMover);
-    const after = moverWinPercent(whiteWPs[i+1], whiteIsMover);
-    const loss = before-after;
-    const acc = accuracyFromLoss(loss);
-    (whiteIsMover ? accWhiteMoves : accBlackMoves).push(acc);
-    const played = hist[i].from + hist[i].to + (hist[i].promotion||'');
-    const isBest = bestmoves[i] === played;
-    const isSacrifice = isSacrificeMove(fens[i+1], hist[i].to, hist[i].color, hist[i].piece);
-    const {cls, label} = classifyMove(Math.max(0,loss), isBest, i, {
-      isSacrifice, moverWinBefore: before, moverWinAfter: after
-    });
-    moves.push({san: hist[i].san, to: hist[i].to, whiteIsMover, cls, label});
-  }
-  const avg = arr => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
-  const accWhite = accuracies?.white ?? avg(accWhiteMoves);
-  const accBlack = accuracies?.black ?? avg(accBlackMoves);
-  const usedOfficial = !!accuracies;
-
-  /* Ergebnis für andere Besucher hochladen, damit niemand die gleiche Partie zweimal analysieren muss */
-  setDoc(cacheRef, {
-    gameUrl: g.url, depth: ANALYSIS_DEPTH, whiteWPs, accWhite, accBlack, usedOfficial, ratings, fens, moves,
-    computedAt: Date.now()
-  }).catch(()=>{});
-
-  return {whiteTeam, blackTeam, whiteWPs, accWhite, accBlack, usedOfficial, gameUrl: g.url, ratings, fens, moves, fromCache: false};
-}
-
-async function openAnalysis(key){
-  const myToken = ++anaToken;
-  const overlay = document.getElementById('ana-overlay');
-  const body = document.getElementById('ana-body');
-  const title = document.getElementById('ana-title');
-  const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
-  const rn = +m[1], mi = +m[2], b = +m[3];
-  const round = ROUNDS.find(x=>x.nr===rn);
-  const pairing = round.ms[mi];
-  const [home, away] = pairing;
-  const whiteTeam = homeIsWhite(b) ? home : away;
-  const blackTeam = homeIsWhite(b) ? away : home;
-  const g = S.games[key];
-  title.textContent = `${T[whiteTeam].flag} ${T[whiteTeam].name} vs ${T[blackTeam].name} ${T[blackTeam].flag} · Brett ${b}`;
-  document.getElementById('ana-depth-slider').value = ANALYSIS_DEPTH;
-  document.getElementById('ana-depth-val').textContent = ANALYSIS_DEPTH;
-  overlay.classList.add('on');
-  body.innerHTML = `<div class="ana-status">⏳ Partie wird geladen…<div class="ana-progress"><div id="ana-prog" style="width:0%"></div></div></div>`;
-
-  try{
-    const result = await computeGameAnalysis(key, g, rn, {
-      isCancelled: () => myToken !== anaToken,
-      onProgress: (frac) => {
-        const prog = document.getElementById('ana-prog');
-        if(prog) prog.style.width = Math.round(frac*100)+'%';
-      }
-    });
-    if(myToken !== anaToken || !result) return;
-    currentAnalysis = result;
-    renderAnalysisResult(body, currentAnalysis, result.fromCache);
-  }catch(e){
-    if(myToken !== anaToken) return;
-    body.innerHTML = `<div class="ana-err">❌ ${esc(e.message)}<br><br><a href="${esc(g?.url||'')}" target="_blank" rel="noopener">Partie stattdessen extern ansehen ↗</a></div>`;
-  }
-}
-function closeAnalysis(){
-  anaToken++;
-  currentAnalysis = null;
-  document.getElementById('ana-overlay').classList.remove('on');
-}
-window.openAnalysis = openAnalysis;
-window.closeAnalysis = closeAnalysis;
-
-/* Füllt den analysis-Cache in Firebase im Hintergrund, ohne dass jemand auf "Analyse" klicken muss —
-   damit sammeln sich echte Elo/Zugdaten für den automatischen Turnierbericht, sobald genug Leute
-   die Seite einfach nur besuchen (oder sobald jemand ein Ergebnis meldet). Nur 1 Partie pro Aufruf,
-   nur wenn gerade kein Analyse-Modal offen ist, und immer mit der geringsten Tiefe (10) - das ist
-   Fremd-Rechenpower im Hintergrund, die soll niemandes Akku/Handy strapazieren. */
-const BG_ANALYSIS_DEPTH = 10;
-let bgAnalyzeRunning = false;
-async function backgroundPreAnalyze(onlyKey){
-  if(bgAnalyzeRunning || currentAnalysis) return;
-  bgAnalyzeRunning = true;
-  const savedDepth = ANALYSIS_DEPTH;
-  try{
-    const candidates = onlyKey ? [[onlyKey, S.games[onlyKey]]] : Object.entries(S.games);
-    for(const [key, g] of candidates){
-      if(!g || !g.url || g.dnf || !validUrl(g.url)) continue;
-      const m = key.match(/^R(\d+)M(\d+)B(\d+)$/);
-      if(!m) continue; // nur Round-Robin-Bretter im Hintergrund, K.o.-Runden nicht
-      const rn = +m[1];
-      try{
-        const cacheSnap = await getDoc(doc(db, 'analysis', key));
-        if(cacheSnap.exists() && cacheSnap.data().gameUrl === g.url) continue; /* schon irgendeine gültige Analyse vorhanden, egal welche Tiefe */
-      }catch(e){ continue; }
-      if(currentAnalysis) return; /* Nutzer hat inzwischen selbst eine Analyse geöffnet */
-      ANALYSIS_DEPTH = BG_ANALYSIS_DEPTH;
-      await computeGameAnalysis(key, g, rn, { isCancelled: () => !!currentAnalysis }).catch(()=>{});
-      break; /* nur eine Partie pro Aufruf */
-    }
-  } finally {
-    ANALYSIS_DEPTH = savedDepth;
-    bgAnalyzeRunning = false;
-  }
-}
 
 /* ---------- Tabelle ---------- */
 function computeStandings(overrideGames){
@@ -1295,7 +708,7 @@ function boardHtml(r, mi, m, b){
     const isDnf = g.dnf || g.res === 'dnf';
     sub = `<div class="sub">
       <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
-      ${isDnf ? '🚫 Kampflos' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a> · <button class="ana-link" onclick="openAnalysis('${k}')">🔍 Analyse</button>` : '')}
+      ${isDnf ? '🚫 Kampflos' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : '')}
       ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
     </div>`;
   }else{
@@ -1349,7 +762,7 @@ function playoffBoardHtml(stageId, m, leg, p0, p1, b){
   if(g){
     sub = `<div class="sub">
       <span class="pill ${g.ok?'ok':'pend'}">${g.ok?'bestätigt':'gemeldet'}</span>
-      ${g.dnf ? '🚫 Kampflos' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a> · <button class="ana-link" onclick="openAnalysis('${k}')">🔍 Analyse</button>` : '')}
+      ${g.dnf ? '🚫 Kampflos' : (g.url && validUrl(g.url) ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Partie ansehen ↗</a>` : '')}
       ${g.by ? `<span>von ${esc(g.by)}</span>` : ''}
     </div>`;
   } else {
@@ -1439,163 +852,6 @@ function renderPlayoffs(){
   el.innerHTML = html;
 }
 
-/* ---------- Meldeformular ---------- */
-const isPlayoffRound = rv => rv==='SF' || rv==='F';
-const LEG_LABELS = {'1':'Hinspiel','2':'Rückspiel','tb0':'Tiebreak 5+0','tb1':'Tiebreak 3+2','tb2':'Tiebreak 3+0','arm':'Armageddon (Brett 1)'};
-
-function fillRounds(){
-  const currentRound = getCurrentRound();
-  document.getElementById('f-round').innerHTML =
-    ROUNDS.map(r=>`<option value="${r.nr}">${r.nr}. Runde (${r.date})</option>`).join('') +
-    `<option value="SF">Halbfinale</option><option value="F">Finale</option>`;
-  document.getElementById('f-round').value = currentRound;
-}
-function fillMatches(){
-  const rv = document.getElementById('f-round').value;
-  const sel = document.getElementById('f-match');
-  document.getElementById('f-leg-wrap').style.display = isPlayoffRound(rv) ? 'block' : 'none';
-  if(isPlayoffRound(rv)){
-    const pairing = rv==='SF' ? semifinalPairing() : finalPairing();
-    sel.innerHTML = pairing
-      ? pairing.map((p,i)=>`<option value="${i}">${esc(T[p.p0].name)} vs ${esc(T[p.p1].name)}</option>`).join('')
-      : `<option value="">– Paarung steht noch nicht fest –</option>`;
-  } else {
-    const r = ROUNDS.find(x=>x.nr===+rv);
-    sel.innerHTML = r.ms.map((m,i)=>`<option value="${i}">${esc(T[m[0]].name)} vs ${esc(T[m[1]].name)}</option>`).join('');
-  }
-  fillLeg();
-}
-function fillLeg(){
-  const rv = document.getElementById('f-round').value;
-  if(isPlayoffRound(rv)){
-    const stageDef = PLAYOFF_STAGE[rv];
-    const opts = ['1','2', ...stageDef.tiebreak.map((_,i)=>'tb'+i), 'arm'];
-    document.getElementById('f-leg').innerHTML = opts.map(v=>`<option value="${v}">${LEG_LABELS[v]}</option>`).join('');
-  }
-  fillBoards();
-}
-function currentPlayoffPairing(rv){
-  return rv==='SF' ? semifinalPairing() : finalPairing();
-}
-function fillBoards(){
-  const rv = document.getElementById('f-round').value;
-  const sel = document.getElementById('f-board');
-  const armWrap = document.getElementById('f-armcolor-wrap');
-  if(isPlayoffRound(rv)){
-    const leg = document.getElementById('f-leg').value;
-    if(leg==='arm'){
-      sel.innerHTML = `<option value="1">Brett 1</option>`;
-      armWrap.style.display = 'block';
-    } else {
-      armWrap.style.display = 'none';
-      const legNum = (leg==='1'||leg==='2') ? +leg : null;
-      sel.innerHTML = [1,2,3].map(b=>{
-        const white = legNum ? playoffP0White(legNum,b) : homeIsWhite(b);
-        return `<option value="${b}">Brett ${b}${legNum?' · '+TIER[b]:''} — ${white?'Team 1 weiß':'Team 1 schwarz'}</option>`;
-      }).join('');
-    }
-  } else {
-    armWrap.style.display = 'none';
-    const mi = +document.getElementById('f-match').value;
-    const m = ROUNDS.find(x=>x.nr===+rv).ms[mi];
-    sel.innerHTML = [1,2,3].map(b=>{
-      const hw = homeIsWhite(b);
-      return `<option value="${b}">Brett ${b} · ${TIER[b]} — ${T[m[0]].name} ${hw?'(weiß)':'(schwarz)'} vs ${T[m[1]].name} ${hw?'(schwarz)':'(weiß)'}</option>`;
-    }).join('');
-  }
-  fillRes();
-}
-function fillRes(){
-  const rv = document.getElementById('f-round').value;
-  const sel = document.getElementById('f-res');
-  let n0, n1;
-  if(isPlayoffRound(rv)){
-    const mi = +document.getElementById('f-match').value;
-    const pairing = currentPlayoffPairing(rv);
-    if(!pairing || isNaN(mi) || !pairing[mi]){ sel.innerHTML = `<option value="">– Begegnung steht noch nicht fest –</option>`; return; }
-    n0 = T[pairing[mi].p0].name; n1 = T[pairing[mi].p1].name;
-  } else {
-    const mi = +document.getElementById('f-match').value;
-    const m = ROUNDS.find(x=>x.nr===+rv).ms[mi];
-    n0 = T[m[0]].name; n1 = T[m[1]].name;
-  }
-  sel.innerHTML = `<option value="">– bitte wählen –</option>
-     <option value="1">Sieg ${esc(n0)}</option>
-     <option value="=">Remis</option>
-     <option value="0">Sieg ${esc(n1)}</option>`;
-}
-async function submitResult(){
-  const box = document.getElementById('f-msg');
-  const btn = document.getElementById('f-send');
-  const rv = document.getElementById('f-round').value;
-  const res = document.getElementById('f-res').value;
-  const type = document.getElementById('f-type').value;
-  const url = document.getElementById('f-url').value.trim();
-  const err = t => box.innerHTML = `<div class="msg err">${t}</div>`;
-  const info = t => box.innerHTML = `<div class="msg info">${t}</div>`;
-
-  if(!res) return err('Bitte ein Ergebnis auswählen.');
-  if(type !== 'dnf' && !url) return err('Bitte einen chess.com oder lichess.org Link angeben.');
-  if(type !== 'dnf' && !validUrl(url)) return err('Ungültiger Link — akzeptiert: chess.com/live/game/[ID] oder lichess.org/[ID]');
-
-  let k, extra = {};
-  if(isPlayoffRound(rv)){
-    const mi = +document.getElementById('f-match').value;
-    const pairing = currentPlayoffPairing(rv);
-    if(!pairing || isNaN(mi) || !pairing[mi]) return err('Diese Begegnung steht noch nicht fest.');
-    const {p0, p1} = pairing[mi];
-    const leg = document.getElementById('f-leg').value;
-    const b = +document.getElementById('f-board').value;
-
-    if(leg==='1' || leg==='2'){
-      k = pkey(rv, mi, +leg, b);
-    } else if(leg.startsWith('tb')){
-      const tbIdx = +leg.slice(2);
-      const st = resolvePlayoffMatch(rv, mi, p0, p1);
-      if(!st.legsComplete) return err('Hin- und Rückspiel müssen erst abgeschlossen sein.');
-      if(st.mpP0 !== st.mpP1) return err('Kein Tiebreak nötig — die Begegnung ist bereits entschieden.');
-      if(tbIdx > 0){
-        const prev = st.tbResults && st.tbResults[tbIdx-1];
-        if(!prev || prev.done !== 3 || prev.winner) return err('Die vorherige Tiebreak-Stufe muss erst unentschieden enden.');
-      }
-      k = tbkey(rv, mi, tbIdx, b);
-    } else {
-      const st = resolvePlayoffMatch(rv, mi, p0, p1);
-      const stageDef = PLAYOFF_STAGE[rv];
-      const tbDone = stageDef.tiebreak.length===0 || (st.tbResults && st.tbResults.length===stageDef.tiebreak.length && st.tbResults.every(t=>t.done===3 && !t.winner));
-      if(!st.legsComplete || st.mpP0 !== st.mpP1 || !tbDone) return err('Armageddon ist erst fällig, wenn alle vorherigen Etappen unentschieden ausgingen.');
-      k = armkey(rv, mi);
-      extra.whiteIsP0 = document.getElementById('f-armcolor').value === 'p0';
-    }
-  } else {
-    const rn = +rv, mi = +document.getElementById('f-match').value, b = +document.getElementById('f-board').value;
-    k = gkey(rn,mi,b);
-  }
-
-  const existing = S.games[k];
-  if(existing && !confirm('Ergebnis existiert bereits. Überschreiben?')) return;
-
-  if(type !== 'dnf'){
-    btn.disabled = true;
-    info('⏳ Prüfe Partie...');
-    const check = await verifyChessGame(url);
-    btn.disabled = false;
-    if(!check.ok){ return err('❌ '+check.msg); }
-    if(check.msg) info('⚠️ '+check.msg);
-  }
-
-  S.games[k] = {res, url: type==='dnf'?'':url, dnf: type==='dnf', ...extra};
-  updateGameInFirebase(k, S.games[k]);
-  renderAll();
-  if(type !== 'dnf') backgroundPreAnalyze(k); /* frisch gemeldete Partie direkt im Hintergrund analysieren, nicht abwarten */
-  box.innerHTML = `<div class="msg good">✅ Ergebnis gespeichert und im Spielplan sichtbar.</div>`;
-  document.getElementById('f-url').value = '';
-  document.getElementById('f-res').value = '';
-  document.getElementById('f-type').value = 'played';
-  document.getElementById('url-wrap').style.display = 'block';
-}
-
-
 /* ---------- Render / Events ---------- */
 function renderAll(){ renderStandings(); renderIndividual(); renderSchedule(); renderPlayoffs(); renderSimulator(); }
 
@@ -1604,12 +860,6 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on', s.id==='tab-'+b.dataset.tab));
   window.scrollTo(0,0);
 });
-
-document.getElementById('f-round').onchange = fillMatches;
-document.getElementById('f-match').onchange = fillLeg;
-document.getElementById('f-leg').onchange = fillBoards;
-document.getElementById('f-board').onchange = fillRes;
-document.getElementById('f-send').onclick = submitResult;
 
 /* ---------- Frühere Berichte (Archiv) ---------- */
 function mdToHtml(md){
@@ -1644,7 +894,7 @@ async function loadPastReports(){
 }
 
 /* Start */
-fillRounds(); fillMatches(); renderAll();
+renderAll();
 loadPastReports();
 </script>
 </body>
