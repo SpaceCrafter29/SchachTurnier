@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live-Schach</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#f5f5f5; --panel:#fff; --line:#d0d0d0; --txt:#222; --muted:#666; --accent:#ff8c00; --ok:#28a745; --bad:#d9534f;
+  --light:#f0d9b5; --dark:#b58863; --sq:min(calc((100vw - 74px) / 8), 64px);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--accent);padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+header h1{margin:0;font-size:22px}
+header a{color:#222;font-size:13px;font-weight:600}
+main{max-width:980px;margin:0 auto;padding:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{margin:0 0 10px;font-size:17px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input[type=text],input[type=number]{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+button{font:inherit;font-weight:600;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--txt);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#222}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.5;cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button.on{background:var(--accent);border-color:var(--accent)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.link{display:flex;gap:8px;margin-top:8px}.link input{flex:1;min-width:0;font-size:13px}
+.msg{padding:10px 12px;border-radius:8px;background:#fff7e6;border:1px solid #ffd591;margin:10px 0}
+.msg.bad{background:#fdecea;border-color:#f5c6cb}.msg.ok{background:#e9f7ef;border-color:#b7e1c1}
+.game{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.boardwrap{display:flex;gap:8px}
+.evalbar{width:22px;border-radius:6px;overflow:hidden;position:relative;background:#222;border:1px solid #888;flex-shrink:0}
+.evalbar .w{position:absolute;left:0;right:0;background:#f4f4f4;transition:height .3s}
+.evalbar .n{position:absolute;left:0;right:0;font-size:10px;text-align:center;font-weight:700;line-height:1}
+.boardcol{width:calc(var(--sq)*8 + 4px)}
+.player{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:var(--panel);border:1px solid var(--line);margin:6px 0;font-weight:600}
+.player .dot{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid #666;margin-right:6px;vertical-align:-1px}
+.clock{font:700 20px/1 ui-monospace,Menlo,Consolas,monospace;padding:6px 10px;border-radius:6px;background:#eee}
+.player.run .clock{background:#222;color:#fff}.clock.low{background:var(--bad)!important;color:#fff!important}
+.board{display:grid;grid-template-columns:repeat(8,var(--sq));grid-template-rows:repeat(8,var(--sq));border:2px solid #444;touch-action:none;user-select:none;-webkit-user-select:none;position:relative}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;font-size:calc(var(--sq)*.8);line-height:1;cursor:pointer}
+.sq.l{background:var(--light)}.sq.d{background:var(--dark)}
+.sq.last::after,.sq.sel::after,.sq.pre::after,.sq.chk::after{content:"";position:absolute;inset:0;pointer-events:none}
+.sq.last::after{background:rgba(255,235,59,.45)}.sq.sel::after{background:rgba(20,160,60,.45)}
+.sq.pre::after{background:rgba(220,60,60,.5)}.sq.chk::after{background:radial-gradient(circle,rgba(255,0,0,.8),rgba(255,0,0,0) 70%)}
+.sq .tg{position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(0,0,0,.22);pointer-events:none}
+.sq .tg.cap{width:92%;height:92%;background:none;border:5px solid rgba(0,0,0,.22)}
+.sq .co{position:absolute;font-size:calc(var(--sq)*.2);line-height:1;pointer-events:none;opacity:.75;font-weight:700}
+.sq .co.r{left:2px;top:2px}.sq .co.f{right:2px;bottom:2px}
+.pc{pointer-events:none;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans","Apple Symbols",sans-serif}
+.pc.w{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 0 1px #000,0 1px 0 #000}
+.pc.b{color:#1a1a1a;text-shadow:0 0 1px #fff}
+.ghost{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-55%);font-size:calc(var(--sq)*1.1)}
+.promo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:20}
+.promo div{background:#fff;border-radius:10px;padding:10px;display:flex;gap:6px}
+.promo button{font-size:34px;line-height:1;padding:6px 10px}
+.side{flex:1;min-width:260px}
+.moves{max-height:260px;overflow:auto;font:14px/1.7 ui-monospace,Menlo,Consolas,monospace;display:grid;grid-template-columns:34px 1fr 1fr;gap:0 6px}
+.moves .n{color:var(--muted)}.moves .cur{background:#ffe6c2;border-radius:4px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+</style>
+</head>
+<body>
+<header><h1>Live-Schach</h1><a href="../">← zum Turnier</a></header>
+<main id="app"><p class="muted">Lädt…</p></main>
+<script src="vendor/peerjs.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
